@@ -14,8 +14,9 @@ from Crypto.Cipher import AES
 from Crypto import Random
 import math
 
-ACTIONS = ['zigzag', 'rocket', 'hair', 'shouldershrug', 'zigzag', 'rocket']
+ACTIONS = ['start', 'zigzag', 'rocket', 'hair', 'shouldershrug', 'zigzag', 'rocket']
 POSITIONS = ['1', '2', '3', '1', '2', '1']
+DANCER_ID = '1'
 
 def client_program(secret_key, port_num):
     host = '127.0.0.1'  # as both code is running on same pc
@@ -29,8 +30,13 @@ def client_program(secret_key, port_num):
 
     try:
         while client_socket.fileno() != -1:
-            #message = input("16 bytes data ->") #take input from the beetle in 16 byte format
-            message = ('#' + POSITIONS[index] + '|' + ACTIONS[index] + '|' + '1.90')
+            if ACTIONS[index] == 'start':
+                #send the 'starting dance move'
+                message = message = ('#1|' + ACTIONS[index] + '|' + DANCER_ID)
+            else:
+                #message = input("16 bytes data ->") #take input from the beetle in 16 byte format
+                message = ('#' + POSITIONS[index] + '|' + ACTIONS[index] + '|' + DANCER_ID)
+
             message = padding(message)
 
             message = encrypt_message(message, secret_key)
@@ -42,11 +48,11 @@ def client_program(secret_key, port_num):
 
             data = data.decode('utf8')    #to remove b'1|rocketman|2.3' more specifically b'...'
             print('received from server: ' + str(data) + '\n')
-            
-            position, action, sync = str(data[1:]).split('|')    #to segregate each data
-            print('\nposition: ' + position + '\naction: ' + action + '\nsync: '+ sync)
 
-            if index == 3: #this should be a closing action from the message, decode the message action
+            position, action = str(data[1:]).split('|')    #to segregate each data
+            print('\nposition: ' + position + '\naction: ' + action)
+
+            if index == 4: #this should be a closing action from the message, decode the message action
                 message = 'bye-bye, close'
                 message = padding(message)
                 message = encrypt_message(message, secret_key)
@@ -57,9 +63,10 @@ def client_program(secret_key, port_num):
 
     except (ConnectionError, ConnectionRefusedError):
         print("error, connection lost")
+        client_socket.close()
         sys.exit(1)
 
-    close_connection(client_socket)  # close the connection
+    client_socket.close()  # close the connection
     print("connection closed")
 
 def padding(message):
@@ -99,11 +106,6 @@ def send_message(message, client_socket):
     print("\t\tsending encrypted message:" + str(message))
     client_socket.send(message)
     print("\t\tsent"+ '\n')
-
-def close_connection(client_socket):
-    #close socket
-    print("closing connection")
-    client_socket.close()
 
 def main():
     dummy_key = b'0123456789ABCDEF'

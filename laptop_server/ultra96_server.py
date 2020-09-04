@@ -15,8 +15,10 @@ from Crypto import Random
 import math
 import ntplib
 
-ACTIONS = ['zigzag', 'rocket', 'hair', 'third', 'zigzag', 'rocket']
+ACTIONS = ['zigzag', 'rocket', 'hair', 'shouldershrug', 'zigzag', 'rocket']
 POSITIONS = ['1 2 3', '3 2 1', '2 3 1', '3 1 2', '1 3 2', '2 1 3']
+
+file = open("raw_data.txt", "a+")
 
 def server_program(secret_key, port_num):
     # get the hostname
@@ -36,15 +38,16 @@ def server_program(secret_key, port_num):
     index = 0
     start_time = 0
     end_time = 0
+    delay = 0
     try:
         while server_socket.fileno() != -1:
             # receive data stream. it won't accept data packet greater than 1024 bytes
             data = conn.recv(1024).decode()
             end_time = time.clock_gettime(time.CLOCK_REALTIME)
 
-            delay = 0
             if start_time != 0:
-                delay = 1000 * (end_time - start_time)            
+                delay = 1000 * (end_time - start_time)
+                delay = round(delay,2)
 
             message = decrypt_message(data,secret_key)
             message = message[:-message[-1]]    #remove padding
@@ -55,8 +58,9 @@ def server_program(secret_key, port_num):
             if message == 'bye-bye, close':
                 break
 
-            position, action, sync = str(message[1:]).split('|')    #to segregate each data
-            print('\nposition: ' + position + '\naction: ' + action + '\nsync: '+ sync)
+            position, action, dancer_id = str(message[1:]).split('|')    #to segregate each data
+            print( '\ndancer id: ' + dancer_id + '\nposition: ' + position + '\naction: ' + action + '\ndelay: '+ str(delay) + 'ms')
+            file.write('index:' + str(index) + '\n' + position + ',' + action + ',' + dancer_id + ',' + str(delay) + '\n\n')
 
             #data = input(' -> ')
             data = ('#' + POSITIONS[index] + '|' + ACTIONS[index])
@@ -69,9 +73,12 @@ def server_program(secret_key, port_num):
 
     except (ConnectionError, ConnectionRefusedError):
         print("error, connection lost")
+        conn.close()
+        file.close()
         sys.exit(1)
 
     conn.close()  # close the connection
+    file.close()
     print("connection closed")
 
 def padding(data):
@@ -114,9 +121,11 @@ def send_message(message, server_socket):
 
 def main():
     secret_key = b'0123456789ABCDEF'
+
     if len(sys.argv) < 2:
         print("enter port number: [PORT]")
         sys.exit()
+
     port_num = sys.argv[1]
 
     server_program(secret_key, port_num)

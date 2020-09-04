@@ -1,0 +1,15 @@
+index:0
+1,start,1,0
+
+index:1
+2,zigzag,1,8.51
+
+index:2
+3,rocket,1,7.8
+
+index:3
+1,hair,1,9.32
+
+index:4
+2,shouldershrug,1,7.15
+
