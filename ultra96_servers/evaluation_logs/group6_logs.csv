@@ -1,0 +1,6 @@
+timestamp,position,gt_position,action,gt_action,response_time,sync,is_action_correct,is_position_correct
+1599052212.2326016,None,2 3 1,None,rocket,60.00705432891846,0,False,False
+1599052212.247954,3 2 1,2 1 3,rocket,hair,0.003875732421875,1,False,False
+1599052212.2599227,2 3 1,1 2 3,hair,hair,0.008188962936401367,2,True,False
+1599052212.2699358,3 1 2,1 2 3,shouldershrug,rocket,0.0049037933349609375,3,False,False
+1599052212.284483,1 3 2,3 2 1,elbowlock,zigzag,0.009275436401367188,4,False,False
