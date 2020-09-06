@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 from Crypto.Cipher import AES
 from Crypto import Random
+import ntplib
 import math
 
 ACTIONS = ['start', 'zigzag', 'rocket', 'hair', 'shouldershrug', 'zigzag', 'rocket']
@@ -44,9 +45,10 @@ def client_program(secret_key, port_num):
 
             data = client_socket.recv(1024).decode()    #wait to receive message from server
             data = decrypt_message(data,secret_key)
+            start_time = request_time()
             data = data[:-data[-1]]    #remove padding
 
-            data = data.decode('utf8')    #to remove b'1|rocketman|2.3' more specifically b'...'
+            data = data.decode('utf8')    #to remove b'1|rocketman|' more specifically b'...'
             print('received from server: ' + str(data) + '\n')
 
             position, action = str(data[1:]).split('|')    #to segregate each data
@@ -106,6 +108,13 @@ def send_message(message, client_socket):
     print("\t\tsending encrypted message:" + str(message))
     client_socket.send(message)
     print("\t\tsent"+ '\n')
+
+def request_time():
+    c= ntplib.NTPClient()
+    response = c.request('pool.ntp.org', version = 3)
+    #for attr in dir(response):
+        #print("remote.%s = %r" % (attr, getattr(response, attr)))
+    return response.orig_time
 
 def main():
     dummy_key = b'0123456789ABCDEF'

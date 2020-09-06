@@ -15,7 +15,7 @@ from Crypto import Random
 import math
 
 ACTIONS = ['zigzag', 'rocket', 'hair', 'shouldershrug', 'elbowlock']
-POSITIONS = ['1 2 3', '3 2 1', '2 3 1', '3 1 2', '1 3 2', '2 1 3']
+POSITIONS = ['3 2 1', '1 2 3', '2 3 1', '3 1 2', '1 3 2', '2 1 3']
 NUM_MOVE_PER_ACTION = 4
 N_TRANSITIONS = 6
 MESSAGE_SIZE = 3 # position, 1 action, sync
@@ -112,7 +112,7 @@ def main():
     while my_client.check_connection() != -1:
         #send data from ultra96 to evaluation server
         #message = input('->')
-        message = ('#' + POSITIONS[index] + '|' + ACTIONS[index] + '|' + str(index))    #change padding, cannot \x10 etc, can only \d \r \t etc
+        message = ('#' + POSITIONS[index] + '|' + ACTIONS[index] + '|' + str(index) + '|')    #change padding, cannot \x10 etc, can only \d \r \t etc
         message = my_client.padding(message)
         cipher_text = my_client.encrypt_message(message)
         my_client.send_message(cipher_text)
