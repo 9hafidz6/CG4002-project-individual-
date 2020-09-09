@@ -30,10 +30,17 @@ def client_program(secret_key, port_num, dancer_id):
     #wait for the start of dance move
     while True:
         if ACTIONS[index] == 'start':
+            print("sending starting flag")
             message = message = ('#1|' + ACTIONS[index] + '|' + dancer_id)
             message = padding(message)
             message = encrypt_message(message,secret_key)
             send_message(message,client_socket)
+
+            data = client_socket.recv(1024).decode()
+            data = decrypt_message(data,secret_key)
+            data = data[:-data[-1]]    #remove padding
+            data = data.decode('utf-8')
+            print(f"server replied: {data}")
             index += 1
             break
 
@@ -48,14 +55,14 @@ def client_program(secret_key, port_num, dancer_id):
 
             data = client_socket.recv(1024).decode()    #wait to receive message from server
             data = decrypt_message(data,secret_key)
-            start_time = request_time()
+            #start_time = request_time()
             data = data[:-data[-1]]    #remove padding
 
             data = data.decode('utf8')    #to remove b'1|rocketman|' more specifically b'...'
-            print('received from server: ' + str(data) + '\n')
+            print(f"received from server: {data} \n")
 
             position, action = str(data[1:]).split('|')    #to segregate each data
-            print('\nposition: ' + position + '\naction: ' + action)
+            print(f"position : {position} \naction: {action} \n")
 
             if index == 4: #this should be a closing action from the message, decode the message action
                 message = 'bye-bye, close'
@@ -79,7 +86,7 @@ def padding(message):
         length = 16 - (len(message) % 16)
         message = message.encode()
         message += bytes([length])*length
-        print("\t\tpadded message: " + str(message))
+        print(f"\t\tpadded message: {message}")
 
         return message
 
@@ -108,7 +115,7 @@ def encrypt_message(message, key):
 
 def send_message(message, client_socket):
     #send message
-    print("\t\tsending encrypted message:" + str(message))
+    print(f"\t\tsending encrypted message: {message}")
     client_socket.send(message)
     print("\t\tsent"+ '\n')
 

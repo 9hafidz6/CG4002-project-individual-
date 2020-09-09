@@ -32,6 +32,10 @@ def threaded_client(conn, secret_key, server_socket):
         message = message[:-message[-1]]    #remove padding
         position, action, dancer_id = str(message[1:]).split('|')
         if action == 'start':
+            data = 'start msg received'
+            data = padding(data)
+            data = encrypt_message(data,secret_key)
+            send_message(data,conn)
             break
     try:
         while server_socket.fileno() != -1:
@@ -53,7 +57,7 @@ def threaded_client(conn, secret_key, server_socket):
                 break
 
             position, action, dancer_id = str(message[1:]).split('|')    #to segregate each data
-            print( '\ndancer id: ' + dancer_id + '\nposition: ' + position + '\naction: ' + action + '\ndelay: '+ str(delay) + 'ms')
+            print(f"\ndancer id: {dancer_id} \nposition: {position} \naction: {action} \ndelay: {delay}ms \n")
             file.write(position + ',' + action + ',' + dancer_id + ',' + str(delay) + '\n')
 
             #data = input(' -> ')
@@ -134,7 +138,8 @@ def main():
     # configure server into listen mode
     server_socket.listen(3)
 
-    while True:
+    #threading
+    while server_socket.fileno() != -1:
         conn, address = server_socket.accept()  # accept new connection
         print('Connected to: ' + address[0] + ':' + str(address[1]))
         start_new_thread(threaded_client, (conn, secret_key, server_socket))
