@@ -30,15 +30,17 @@ def server_program(secret_key, port_num):
     # look closely. The bind() function takes tuple as argument
     server_socket.bind((host, port))  # bind host address and port together
 
-    # configure how many client the server can listen simultaneously
+    # configure server into listen mode
     server_socket.listen(3)
     conn, address = server_socket.accept()  # accept new connection
     print("Connection from: " + str(address) + '\n')
 
     index = 0
+
     start_time = 0
     end_time = 0
     delay = 0
+
     try:
         while server_socket.fileno() != -1:
             # receive data stream. it won't accept data packet greater than 1024 bytes
@@ -60,7 +62,7 @@ def server_program(secret_key, port_num):
 
             position, action, dancer_id = str(message[1:]).split('|')    #to segregate each data
             print( '\ndancer id: ' + dancer_id + '\nposition: ' + position + '\naction: ' + action + '\ndelay: '+ str(delay) + 'ms')
-            file.write('index:' + str(index) + '\n' + position + ',' + action + ',' + dancer_id + ',' + str(delay) + '\n\n')
+            file.write(position + ',' + action + ',' + dancer_id + ',' + str(delay) + '\n')
 
             #data = input(' -> ')
             data = ('#' + POSITIONS[index] + '|' + ACTIONS[index])

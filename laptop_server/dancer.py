@@ -5,7 +5,6 @@ import random
 import time
 
 import socket
-import threading
 
 import base64
 import numpy as np
@@ -17,9 +16,8 @@ import math
 
 ACTIONS = ['start', 'zigzag', 'rocket', 'hair', 'shouldershrug', 'zigzag', 'rocket']
 POSITIONS = ['1', '2', '3', '1', '2', '1']
-DANCER_ID = '1'
 
-def client_program(secret_key, port_num):
+def client_program(secret_key, port_num, dancer_id):
     host = '127.0.0.1'  # as both code is running on same pc
     #host = socket.gethostname()
     port = int(port_num)  # socket server port number
@@ -29,14 +27,19 @@ def client_program(secret_key, port_num):
 
     index = 0
 
+    #wait for the start of dance move
+    while True:
+        if ACTIONS[index] == 'start':
+            message = message = ('#1|' + ACTIONS[index] + '|' + dancer_id)
+            message = padding(message)
+            message = encrypt_message(message,secret_key)
+            send_message(message,client_socket)
+            index += 1
+            break
+
     try:
         while client_socket.fileno() != -1:
-            if ACTIONS[index] == 'start':
-                #send the 'starting dance move'
-                message = message = ('#1|' + ACTIONS[index] + '|' + DANCER_ID)
-            else:
-                #message = input("16 bytes data ->") #take input from the beetle in 16 byte format
-                message = ('#' + POSITIONS[index] + '|' + ACTIONS[index] + '|' + DANCER_ID)
+            message = ('#' + POSITIONS[index] + '|' + ACTIONS[index] + '|' + dancer_id)
 
             message = padding(message)
 
@@ -119,13 +122,14 @@ def request_time():
 def main():
     dummy_key = b'0123456789ABCDEF'
 
-    if len(sys.argv) < 2:
-        print("enter port number: [PORT] ")
+    if len(sys.argv) < 3:
+        print("enter port number [PORT] and dancer id [DANCER_ID]")
         sys.exit()
 
     port_num = sys.argv[1]
+    dancer_id = sys.argv[2]
 
-    client_program(dummy_key, port_num)
+    client_program(dummy_key, port_num, dancer_id)
 
 if __name__ == '__main__':
     main()

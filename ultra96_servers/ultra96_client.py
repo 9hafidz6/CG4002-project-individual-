@@ -92,15 +92,6 @@ def main():
     port_num = int(sys.argv[2])
     #secret_key = sys.argv[3]
     secret_key = b'0123456789ABCDEF' #dummy secret key, 16 bytes
-    #dummy_message = '#1 2 3|shouldershrug|1.80' #must be multiple of 16 bytes
-
-    '''
-    #check the input arguments
-    print(sys.argv[1])
-    print(sys.argv[2])
-    print(sys.argv[3])
-    print(sys.argv[4])
-    '''
 
     my_client = Client(ser_addr, port_num, secret_key)
     my_client.start() #start the thread
@@ -109,19 +100,21 @@ def main():
 
     test = input('->')
 
-    while my_client.check_connection() != -1:
+    while my_client.check_connection() != -1 or index <= len(POSITIONS):
         #send data from ultra96 to evaluation server
         #message = input('->')
-        message = ('#' + POSITIONS[index] + '|' + ACTIONS[index] + '|' + str(index) + '|')    #change padding, cannot \x10 etc, can only \d \r \t etc
+        message = ('#' + POSITIONS[index] + '|' + ACTIONS[index] + '|' + '1.87')    #change padding, cannot \x10 etc, can only \d \r \t etc
         message = my_client.padding(message)
         cipher_text = my_client.encrypt_message(message)
         my_client.send_message(cipher_text)
 
-        data = my_client.receive_message()
+        data = my_client.receive_message()  #data from eval server is not encrpyted, just decode
         print(data)
 
         index += 1
 
+    print('closing connection')
     my_client.close_connection()
+    
 if __name__ == '__main__':
     main()
