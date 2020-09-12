@@ -14,7 +14,7 @@ from Crypto import Random
 import ntplib
 import math
 
-ACTIONS = ['start', 'zigzag', 'rocket', 'hair', 'shouldershrug', 'zigzag', 'rocket']
+ACTIONS = ['zigzag', 'rocket', 'hair', 'shouldershrug', 'zigzag', 'rocket']
 POSITIONS = ['1', '2', '3', '1', '2', '1']
 
 def client_program(secret_key, port_num, dancer_id):
@@ -27,40 +27,39 @@ def client_program(secret_key, port_num, dancer_id):
 
     index = 0
 
-    #wait for the start of dance move
-    while True:
-        if ACTIONS[index] == 'start':
-            print("sending starting flag")
-            message = message = ('#1|' + ACTIONS[index] + '|' + dancer_id)
-            message = padding(message)
-            message = encrypt_message(message,secret_key)
-            send_message(message,client_socket)
-
-            data = client_socket.recv(1024).decode()
-            data = decrypt_message(data,secret_key)
-            data = data[:-data[-1]]    #remove padding
-            data = data.decode('utf-8')
-            print(f"server replied: {data}")
-            index += 1
-            break
-
     try:
         while client_socket.fileno() != -1:
-            message = ('#' + POSITIONS[index] + '|' + ACTIONS[index] + '|' + dancer_id)
+            #wait for the start of dance move, CORRECTION needs to be done before of every set of moves
+            while True:
+                flag = input('->')
+                if flag == 'start':
+                    print("sending starting flag")
+                    message = f"#1|{flag}|{dancer_id}"
+                    message = padding(message)
+                    message = encrypt_message(message,secret_key)
+                    send_message(message,client_socket)
 
+                    data = client_socket.recv(1024).decode()
+                    data = decrypt_message(data,secret_key)
+                    data = data[:-data[-1]]    #remove padding
+                    data = data.decode('utf-8')
+                    print(f"server replied: {data}")
+                    break
+                else:
+                    print("not the starting move")
+
+            message = f"#{POSITIONS[index]}|{ACTIONS[index]}|{dancer_id}"
             message = padding(message)
-
             message = encrypt_message(message, secret_key)
+            user_prompt = input('->')
             send_message(message,client_socket) #send the encrypted message
 
             data = client_socket.recv(1024).decode()    #wait to receive message from server
             data = decrypt_message(data,secret_key)
             #start_time = request_time()
             data = data[:-data[-1]]    #remove padding
-
             data = data.decode('utf8')    #to remove b'1|rocketman|' more specifically b'...'
             print(f"received from server: {data} \n")
-
             position, action = str(data[1:]).split('|')    #to segregate each data
             print(f"position : {position} \naction: {action} \n")
 
@@ -94,10 +93,8 @@ def decrypt_message(message,key):
     print("decrpyting message")
     decoded_message = base64.b64decode(message)
     iv = decoded_message[:16]
-
     cipher = AES.new(key, AES.MODE_CBC, iv)
     decrypted_message = cipher.decrypt(decoded_message[16:])
-
     #print(str(decrypted_message))
 
     return decrypted_message
@@ -108,7 +105,6 @@ def encrypt_message(message, key):
     iv = Random.new().read(AES.block_size)
     cipher = AES.new(key, AES.MODE_CBC, iv)
     encoded = base64.b64encode(iv + cipher.encrypt(message))
-
     print("\t\tmessage encrypted")
 
     return encoded
@@ -128,13 +124,17 @@ def request_time():
 
 def main():
     dummy_key = b'0123456789ABCDEF'
-
+    '''
     if len(sys.argv) < 3:
         print("enter port number [PORT] and dancer id [DANCER_ID]")
         sys.exit()
 
     port_num = sys.argv[1]
     dancer_id = sys.argv[2]
+    '''
+    #dummy_key = input('enter key->')
+    port_num = input('enter port number->')
+    dancer_id = input('enter dancer ID->')
 
     client_program(dummy_key, port_num, dancer_id)
 

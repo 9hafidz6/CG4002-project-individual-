@@ -20,7 +20,7 @@ print(time.perf_counter())
 time.sleep(5)   #sleep for 5 seconds
 print(time.perf_counter())
 '''
-
+'''
 import time
 
 start_time = time.clock_gettime(time.CLOCK_REALTIME)
@@ -29,7 +29,7 @@ print(start_time)
 end_time = time.clock_gettime(time.CLOCK_REALTIME)
 print(end_time)
 print('time difference:' + str(end_time -start_time))
-
+'''
 '''
 # Python program to explain time.clock_settime() method
 
