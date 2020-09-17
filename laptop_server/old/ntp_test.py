@@ -1,17 +1,9 @@
-'''from time import ctime
 import time
-import ntplib
 
-ntpc = ntplib.NTPClient()
-resp = ntpc.request('pool.ntp.org')
-print ('Global Time: ',ctime(resp.tx_time))
-print('Local Time: ',ctime())
+timer = time.time()
+print(timer)
 
-time.sleep(5)
 
-print ('Global Time: ',ctime(resp.tx_time))
-
-'''
 
 '''
 import time

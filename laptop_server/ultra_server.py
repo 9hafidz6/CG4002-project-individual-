@@ -23,52 +23,29 @@ def threaded_client(conn, secret_key, server_socket):
     index = 0
 
     start_time = 0
-    end_time = 0
     delay = 0
 
     try:
         while server_socket.fileno() != -1:
-            #wait for a start flag might not need 
-            while True:
-                data = conn.recv(1024).decode()
-                message = decrypt_message(data, secret_key)
-                message = message[:-message[-1]]    #remove padding
-                message = message.decode('utf8')
-                position, action, dancer_id = str(message[1:]).split('|')
-                if action == 'start':
-                    data = 'start msg received'
-                    #data = padding(data)
-                    #data = encrypt_message(data,secret_key)
-                    #conn.send(data)
-                    send_data(conn,secret_key,data)
-                    break
+            start_time = request_time()
+            data = (f"#{POSITIONS[index]}|{ACTIONS[index]}|{start_time}")
+            send_data(conn,secret_key,data)
+            #print("message sent")
 
             # receive data stream. it won't accept data packet greater than 1024 bytes
             data = conn.recv(1024).decode()
-            end_time = time.clock_gettime(time.CLOCK_REALTIME)
-
-            if start_time != 0:
-                delay = 1000 * (end_time - start_time)
-                delay = round(delay,2)
 
             message = decrypt_message(data,secret_key)
             message = message[:-message[-1]]    #remove padding
             #print("received from client: " + str(message))
             message = message.decode('utf8')    #to remove b'1|rocketman|2.3', b''
-            if message == 'bye-bye, close':
-                break
 
-            position, action, dancer_id = str(message[1:]).split('|')    #to segregate each data
-            print(f"\ndancer id: {dancer_id} \nposition: {position} \naction: {action} \ndelay: {delay}ms \n")
+            position, action, dancer_id, delay = str(message[1:]).split('|')    #to segregate each data
+            print(f"\ndancer id: {dancer_id} \nposition: {position} \naction: {action} \ndelay: {delay}s \n")
             file.write(position + ',' + action + ',' + dancer_id + ',' + str(delay) + '\n')
-            data = ('#' + POSITIONS[index] + '|' + ACTIONS[index])
-            #data = padding(data)
-            #data = encrypt_message(data,secret_key)
-            #user_prompt = input('->')
-            #conn.send(data)
-            send_data(conn,secret_key,data)
-            #print("message sent")
-            start_time = time.clock_gettime(time.CLOCK_REALTIME)
+
+            if action == 'bye-bye, close':
+                break
 
             index += 1
 
@@ -82,37 +59,46 @@ def threaded_client(conn, secret_key, server_socket):
     file.close()
     print("connection closed")
 
+#====================================================================================================================================================================
 def padding(data):
         #padding to make the message in multiples of 16
         length = 16 - (len(data) % 16)
         data = data.encode()
         data += bytes([length])*length
-        #print("\t\tpadded message: " + str(data))
+        print("\t\tpadding: " + str(data))
         return data
 
 def decrypt_message(cipher_text, key):
-    #print("decrpyting message")
+    print("decrpyting message")
     decoded_message = base64.b64decode(cipher_text)
     iv = decoded_message[:16]
     cipher = AES.new(key, AES.MODE_CBC, iv)
     decrypted_message = cipher.decrypt(decoded_message[16:])    #removed the strip() function
-    #print(str(decrypted_message))
+    print(f"{decrypted_message}")
     return decrypted_message
 
 def encrypt_message(message, secret_key):
     #encrypt messages
-    #print("\t\tencrypting message")
+    print("\t\tencrypting data")
     iv = Random.new().read(AES.block_size)
     cipher = AES.new(secret_key, AES.MODE_CBC, iv)
     encoded = base64.b64encode(iv + cipher.encrypt(message))
-    #print("\t\tmessage encrypted")
+    print(f"\t\data encrypted: {encoded}")
     return encoded
 
 def send_data(conn, secret_key, data):
     data = padding(data)
     data = encrypt_message(data,secret_key)
     conn.send(data)
+    print("data sent")
 
+def request_time():
+    c= ntplib.NTPClient()
+    response = c.request('pool.ntp.org', version = 3)
+    #for attr in dir(response):
+        #print("remote.%s = %r" % (attr, getattr(response, attr)))
+    return response.orig_time
+#====================================================================================================================================================================
 def main():
     ThreadCount = 0
     secret_key = b'0123456789ABCDEF'
