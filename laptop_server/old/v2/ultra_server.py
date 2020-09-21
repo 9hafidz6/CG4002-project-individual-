@@ -20,40 +20,26 @@ POSITIONS = ['1 2 3', '3 2 1', '2 3 1', '3 1 2', '1 3 2', '2 1 3']
 
 def threaded_client(conn, secret_key, server_socket):
     file = open("raw_data.txt", "a+")
-    #index = 0
+    index = 0
 
     start_time = 0
     delay = 0
 
     try:
         while server_socket.fileno() != -1:
-
-            '''
             start_time = request_time()
             data = (f"#{POSITIONS[index]}|{ACTIONS[index]}|{start_time}")
             send_data(conn,secret_key,data)
             #print("message sent")
-            '''
-            '''
+
             # receive data stream. it won't accept data packet greater than 1024 bytes
-            message = conn.recv(1024).decode()
+            data = conn.recv(1024).decode()
 
-            message = decrypt_message(message,secret_key)
+            message = decrypt_message(data,secret_key)
             message = message[:-message[-1]]    #remove padding
-
             #print("received from client: " + str(message))
             message = message.decode('utf8')    #to remove b'1|rocketman|2.3', b''
-            '''
-            while True:
-                message = recv_data(conn, secret_key)
-                print(f"message received: {message}\n")
-                if message == 'start':
-                    ntp_time = request_time()
-                    data = (f"{ntp_time}")
-                    send_data(conn, secret_key, data)
-                    break
 
-            message = recv_data(client_socket, secret_key)
             position, action, dancer_id, delay = str(message[1:]).split('|')    #to segregate each data
             print(f"\ndancer id: {dancer_id} \nposition: {position} \naction: {action} \ndelay: {delay}s \n")
             file.write(position + ',' + action + ',' + dancer_id + ',' + str(delay) + '\n')
@@ -61,7 +47,7 @@ def threaded_client(conn, secret_key, server_socket):
             if action == 'bye-bye, close':
                 break
 
-            #index += 1
+            index += 1
 
 
     except (ConnectionError, ConnectionRefusedError):
@@ -107,13 +93,6 @@ def send_data(conn, secret_key, data):
     conn.send(data)
     print("data sent")
 
-def recv_data(client_socket, secret_key):
-    message = client_socket.recv(1024).decode()  #wait to receive message
-    message = decrypt_message(message,secret_key)
-    message = message[:-message[-1]]    #remove padding
-    message = message.decode('utf8')    #to remove b'1|rocketman|
-    return message
-
 def request_time():
     c= ntplib.NTPClient()
     response = c.request('pool.ntp.org', version = 3)
@@ -132,7 +111,7 @@ def main():
 
     port_num = sys.argv[1]
     #host = socket.gethostname()
-    host = '127.0.0.2'
+    host = '127.0.0.1'
 
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # get instance
     try:

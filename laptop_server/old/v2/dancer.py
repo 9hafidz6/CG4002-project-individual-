@@ -18,7 +18,7 @@ ACTIONS = ['zigzag', 'rocket', 'hair', 'shouldershrug', 'zigzag', 'bye-bye, clos
 POSITIONS = ['1', '2', '3', '1', '2', '1']
 
 def client_program(secret_key, port_num, dancer_id):
-    host = '127.0.0.2'  # as both code is running on same pc
+    host = '127.0.0.1'  # as both code is running on same pc
     #host = socket.gethostname()
     port = int(port_num)  # socket server port number
 
@@ -26,11 +26,10 @@ def client_program(secret_key, port_num, dancer_id):
     client_socket.connect((host, port))  # connect to the server
 
     index = 0
-    #start_time = 0
+    start_time = 0
 
     try:
         while client_socket.fileno() != -1:
-            '''
             message = client_socket.recv(1024).decode()  #wait to receive message from server
             timer = time.time()
             message = decrypt_message(message,secret_key)
@@ -40,16 +39,7 @@ def client_program(secret_key, port_num, dancer_id):
             position, action, ntp_time = str(message[1:]).split('|')    #to segregate each data
             print(f"position : {position} \naction: {action} \nNTP time: {ntp_time}\n")
             offset = timer - float(ntp_time)
-            '''
-            #create a while loop to wait for start to get RTT time
-            while True:
-                data = input('->')
-                send_data(conn,secret_key,data)
-                if data == 'start':
-                    message = recv_data(client_socket,secret_key)
-                    print(f"message received: {message}\n") #receive NTP timing from ultraServer
-                    break
-            '''
+
             #wait for the start of dance move, FOR TESTING, actual would be timestamp sent by beetle
             while True:
                 flag = input('->')
@@ -58,9 +48,8 @@ def client_program(secret_key, port_num, dancer_id):
                     break
                 else:
                     print("not the starting move")
-            '''
 
-            #delay = start_time - timer - offset
+            delay = start_time - timer - offset
             data = (f"#{POSITIONS[index]}|{ACTIONS[index]}|{dancer_id}|{delay}")
             send_data(client_socket,secret_key,data)
 
@@ -79,12 +68,12 @@ def client_program(secret_key, port_num, dancer_id):
 
 #====================================================================================================================================================================
 def padding(message):
-    #padding to make the message in multiples of 16
-    length = 16 - (len(message) % 16)
-    message = message.encode()
-    message += bytes([length])*length
-    print(f"\t\tpadding: {message}")
-    return message
+        #padding to make the message in multiples of 16
+        length = 16 - (len(message) % 16)
+        message = message.encode()
+        message += bytes([length])*length
+        print(f"\t\tpadding: {message}")
+        return message
 
 def decrypt_message(message,key):
     print("decrpyting message")
@@ -111,13 +100,6 @@ def send_data(conn, secret_key, data):
     conn.send(data)
     print("\t\tsent data\n")
 
-def recv_data(client_socket, secret_key):
-    message = client_socket.recv(1024).decode()  #wait to receive message
-    message = decrypt_message(message,secret_key)
-    message = message[:-message[-1]]    #remove padding
-    message = message.decode('utf8')    #to remove b'1|rocketman|
-    return message
-
 def request_time():
     c= ntplib.NTPClient()
     response = c.request('pool.ntp.org', version = 3)
@@ -129,7 +111,14 @@ def request_time():
 def main():
     #hard coded for testing purposes, actual run will ask user to input
     dummy_key = b'0123456789ABCDEF'
+    '''
+    if len(sys.argv) < 3:
+        print("enter port number [PORT] and dancer id [DANCER_ID]")
+        sys.exit()
 
+    port_num = sys.argv[1]
+    dancer_id = sys.argv[2]
+    '''
     #dummy_key = input('enter key->')
     port_num = input('enter port number->')
     dancer_id = input('enter dancer ID->')
