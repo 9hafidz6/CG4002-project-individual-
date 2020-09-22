@@ -98,13 +98,14 @@ class Client(threading.Thread):
 def main():
     ser_addr = input('server address->')
     ser_port = input('server port->')
-    ser_port = int(ser_port)
+    #ser_port = int(ser_port)
+
     #dash_addr = input('dashboard address->')
     #dash_port = input('dashboard port->')
     #dash_port = int(dash_port)
     secret_key = b'0123456789ABCDEF' #dummy secret key, 16 bytes
 
-    evaluation_thread = Client(ser_addr, ser_port, secret_key)
+    evaluation_thread = Client(ser_addr, int(ser_port), secret_key)
     evaluation_thread.start() #start the thread
 
     #start another thread to pass data to dashboard

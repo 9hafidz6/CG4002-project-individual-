@@ -27,42 +27,25 @@ def threaded_client(conn, secret_key, server_socket):
 
     try:
         while server_socket.fileno() != -1:
-
-            '''
-            start_time = request_time()
-            data = (f"#{POSITIONS[index]}|{ACTIONS[index]}|{start_time}")
-            send_data(conn,secret_key,data)
-            #print("message sent")
-            '''
-            '''
-            # receive data stream. it won't accept data packet greater than 1024 bytes
-            message = conn.recv(1024).decode()
-
-            message = decrypt_message(message,secret_key)
-            message = message[:-message[-1]]    #remove padding
-
-            #print("received from client: " + str(message))
-            message = message.decode('utf8')    #to remove b'1|rocketman|2.3', b''
-            '''
             while True:
                 message = recv_data(conn, secret_key)
-                print(f"message received: {message}\n")
+                message, time1 = str(message[1:]).split('|')
+                print(f"initial message received: {message}")
                 if message == 'start':
                     ntp_time = request_time()
                     data = (f"{ntp_time}")
                     send_data(conn, secret_key, data)
                     break
 
-            message = recv_data(client_socket, secret_key)
+            message = recv_data(conn, secret_key)
             position, action, dancer_id, delay = str(message[1:]).split('|')    #to segregate each data
-            print(f"\ndancer id: {dancer_id} \nposition: {position} \naction: {action} \ndelay: {delay}s \n")
+            print(f"receive message from laptop: \ndancer id: {dancer_id} \nposition: {position} \naction: {action} \ndelay: {delay}s \n")
             file.write(position + ',' + action + ',' + dancer_id + ',' + str(delay) + '\n')
 
             if action == 'bye-bye, close':
                 break
 
             #index += 1
-
 
     except (ConnectionError, ConnectionRefusedError):
         print("error, connection lost")
@@ -76,36 +59,36 @@ def threaded_client(conn, secret_key, server_socket):
 
 #====================================================================================================================================================================
 def padding(data):
-        #padding to make the message in multiples of 16
-        length = 16 - (len(data) % 16)
-        data = data.encode()
-        data += bytes([length])*length
-        print("\t\tpadding: " + str(data))
-        return data
+    #padding to make the message in multiples of 16
+    length = 16 - (len(data) % 16)
+    data = data.encode()
+    data += bytes([length])*length
+    #print("\t\tpadding: " + str(data))
+    return data
 
 def decrypt_message(cipher_text, key):
-    print("decrpyting message")
+    #print("decrpyting message")
     decoded_message = base64.b64decode(cipher_text)
     iv = decoded_message[:16]
     cipher = AES.new(key, AES.MODE_CBC, iv)
     decrypted_message = cipher.decrypt(decoded_message[16:])    #removed the strip() function
-    print(f"{decrypted_message}")
+    #print(f"{decrypted_message}")
     return decrypted_message
 
 def encrypt_message(message, secret_key):
     #encrypt messages
-    print("\t\tencrypting data")
+    #print("\t\tencrypting data")
     iv = Random.new().read(AES.block_size)
     cipher = AES.new(secret_key, AES.MODE_CBC, iv)
     encoded = base64.b64encode(iv + cipher.encrypt(message))
-    print(f"\t\tdata encrypted: {encoded}")
+    #print(f"\t\tdata encrypted: {encoded}")
     return encoded
 
 def send_data(conn, secret_key, data):
     data = padding(data)
     data = encrypt_message(data,secret_key)
     conn.send(data)
-    print("data sent")
+    print("NTP time data sent\n")
 
 def recv_data(client_socket, secret_key):
     message = client_socket.recv(1024).decode()  #wait to receive message
@@ -132,7 +115,7 @@ def main():
 
     port_num = sys.argv[1]
     #host = socket.gethostname()
-    host = '127.0.0.2'
+    host = '127.0.0.1'
 
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # get instance
     try:

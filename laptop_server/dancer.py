@@ -13,12 +13,16 @@ from Crypto.Cipher import AES
 from Crypto import Random
 import ntplib
 import math
+import threading
 
 ACTIONS = ['zigzag', 'rocket', 'hair', 'shouldershrug', 'zigzag', 'bye-bye, close']
 POSITIONS = ['1', '2', '3', '1', '2', '1']
 
+START = ' '
+MESSAGE = ' '
+
 def client_program(secret_key, port_num, dancer_id):
-    host = '127.0.0.2'  # as both code is running on same pc
+    host = '127.0.0.1'  # as both code is running on same pc
     #host = socket.gethostname()
     port = int(port_num)  # socket server port number
 
@@ -27,42 +31,31 @@ def client_program(secret_key, port_num, dancer_id):
 
     index = 0
     #start_time = 0
+    RTT = 0
 
     try:
         while client_socket.fileno() != -1:
-            '''
-            message = client_socket.recv(1024).decode()  #wait to receive message from server
-            timer = time.time()
-            message = decrypt_message(message,secret_key)
-            message = message[:-message[-1]]    #remove padding
-            message = message.decode('utf8')    #to remove b'1|rocketman|' more specifically b'...'
-            print(f"received from server: {message} \n")
-            position, action, ntp_time = str(message[1:]).split('|')    #to segregate each data
-            print(f"position : {position} \naction: {action} \nNTP time: {ntp_time}\n")
-            offset = timer - float(ntp_time)
-            '''
+            global START
+            global MESSAGE
             #create a while loop to wait for start to get RTT time
             while True:
-                data = input('->')
-                send_data(conn,secret_key,data)
-                if data == 'start':
+                while START == ' ':
+                    pass
+                user_action = START
+                timer = time.time()
+                data = (f"#{user_action}|{timer}")
+                send_data(client_socket,secret_key,data)
+                START = ' '
+                if user_action == 'start':
                     message = recv_data(client_socket,secret_key)
                     print(f"message received: {message}\n") #receive NTP timing from ultraServer
                     break
-            '''
-            #wait for the start of dance move, FOR TESTING, actual would be timestamp sent by beetle
-            while True:
-                flag = input('->')
-                if flag == 'start':
-                    start_time = time.time()
-                    break
-                else:
-                    print("not the starting move")
-            '''
 
-            #delay = start_time - timer - offset
-            data = (f"#{POSITIONS[index]}|{ACTIONS[index]}|{dancer_id}|{delay}")
+            while MESSAGE == ' ':
+                pass
+            data = (f"{MESSAGE}|{dancer_id}|1.5")
             send_data(client_socket,secret_key,data)
+            MESSAGE = ' '
 
             if ACTIONS[index] == 'bye-bye, close':
                 break
@@ -75,7 +68,32 @@ def client_program(secret_key, port_num, dancer_id):
         sys.exit(1)
 
     client_socket.close()  # close the connection
-    print("connection closed")
+    print("client connection closed")
+
+#listen to localhost python (beetle process)
+def server_program():
+    host = '127.0.0.2'
+    port = 8081
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind((host, port))
+    server_socket.listen(1)
+
+    conn, address = server_socket.accept()
+    try:
+        while server_socket.fileno() != -1:
+            global START
+            global MESSAGE
+            START = conn.recv(1024).decode('utf8')
+            print(f"message from beetle part 1: {START}\n")
+            MESSAGE = conn.recv(1024).decode('utf8')
+            print(f"message from beetle part 2: {MESSAGE}\n")
+
+            if MESSAGE == '#1|bye-bye, close':
+                break
+    except:
+        conn.close()
+    conn.close()
+    print("server connection closed")
 
 #====================================================================================================================================================================
 def padding(message):
@@ -83,33 +101,33 @@ def padding(message):
     length = 16 - (len(message) % 16)
     message = message.encode()
     message += bytes([length])*length
-    print(f"\t\tpadding: {message}")
+    #print(f"\t\tpadding: {message}")
     return message
 
 def decrypt_message(message,key):
-    print("decrpyting message")
+    #print("decrpyting message")
     decoded_message = base64.b64decode(message)
     iv = decoded_message[:16]
     cipher = AES.new(key, AES.MODE_CBC, iv)
     decrypted_message = cipher.decrypt(decoded_message[16:])
-    print(f"{decrypt_message}")
+    #print(f"{decrypt_message}")
     return decrypted_message
 
 def encrypt_message(message, key):
-    #encrypt messages
-    print("\t\tencrypting data")
+    #encrypt messagesc
+    #print("\t\tencrypting data")
     iv = Random.new().read(AES.block_size)
     cipher = AES.new(key, AES.MODE_CBC, iv)
     encoded = base64.b64encode(iv + cipher.encrypt(message))
-    print("\t\data encrypted")
+    #print("\t\tdata encrypted")
     return encoded
 
 def send_data(conn, secret_key, data):
     data = padding(data)
     data = encrypt_message(data,secret_key)
-    print(f"\t\tsending encrypted data: {data}")
+    print(f"sending encrypted data: {data}")
     conn.send(data)
-    print("\t\tsent data\n")
+    print("sent data\n")
 
 def recv_data(client_socket, secret_key):
     message = client_socket.recv(1024).decode()  #wait to receive message
@@ -134,7 +152,16 @@ def main():
     port_num = input('enter port number->')
     dancer_id = input('enter dancer ID->')
 
-    client_program(dummy_key, port_num, dancer_id)
+    #client_program(dummy_key, port_num, dancer_id)
+    t1 = threading.Thread(target=client_program,args=(dummy_key, port_num, dancer_id))
+    t2 = threading.Thread(target=server_program,args=())
+    t1.start()
+    t2.start()
+
+    t1.join()
+    t2.join()
+
+    print("done!!")
 
 if __name__ == '__main__':
     main()
