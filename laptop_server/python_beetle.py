@@ -7,9 +7,6 @@ import time
 import socket
 import csv
 
-ACTIONS = ['zigzag', 'rocket', 'hair', 'shouldershrug', 'zigzag', 'bye-bye, close']
-POSITIONS = ['1', '2', '3', '1', '2', '1']
-
 '''
 #reading from csv file, actual data
 with open('xavier_elbowlock.csv', mode = 'r') as file:
@@ -22,35 +19,6 @@ with open('xavier_elbowlock.csv', mode = 'r') as file:
             break
 '''
 #==============================================================================================================================================
-'''
-def main():
-    #main program
-    start_prompt = input('->')
-    host = '127.0.0.1'
-    port_num = 8081
-    index = 0
-
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # instantiate
-    client_socket.connect((host, port_num))  # connect to the server
-    print('connected\n')
-    while index <= len(ACTIONS) - 1:
-        data = 'start'
-        data = data.encode()
-        client_socket.send(data)
-        print("start command sent")
-        time.sleep(1)
-        data = (f"#{POSITIONS[index]}|{ACTIONS[index]}")
-        data = data.encode()
-        print(f"data sent: {data}")
-        client_socket.send(data)
-        time.sleep(3)
-        index += 1
-    client_socket.close()
-
-if __name__ == '__main__':
-    main()
-'''
-#==============================================================================================================================================
 def main():
     #main program
     start_prompt = input('->')
@@ -63,18 +31,20 @@ def main():
     print('connected\n')
 
     index = 0
+    #open the csv file
     with open('xavier_elbowlock.csv', mode = 'r') as file:
         csvFile = csv.DictReader(file)
-        for lines in csvFile:
-            data = "#" #might only be for the first line
-            data = data.encode()
-            client_socket.send(data)
-            print("start flag sent")
-            time.sleep(1)
 
+        data = "#" #might only be for the first line
+        data = data.encode()
+        client_socket.send(data)
+        print("start flag sent")
+        time.sleep(1)
+
+        for lines in csvFile:
             if index == 5:
                 data = ("bye-bye, close")
-                print(data)
+                print(f"data sent: {data}")
                 data = data.encode()
                 client_socket.send(data)
                 break
@@ -83,9 +53,10 @@ def main():
             data = data.encode()
             print(f"data sent: {data}")
             client_socket.send(data)
-            time.sleep(3)
+            time.sleep(1)
             index += 1
     client_socket.close()
+    print("python process ended")
 
 if __name__ == '__main__':
     main()

@@ -15,7 +15,7 @@ from Crypto import Random
 import math
 import ntplib
 
-def threaded_client(conn, secret_key, server_socket):
+def threaded_client(conn, secret_key, server_socket, ThreadCount):
     file = open("raw_data.txt", "a+")
     #index = 0
 
@@ -24,30 +24,32 @@ def threaded_client(conn, secret_key, server_socket):
 
     try:
         while server_socket.fileno() != -1:
+            finish = False
+            #wait for start of dance, get ntp timing and send back to get rtt and offset
             while True:
                 message = recv_data(conn, secret_key)
-                message, time1 = str(message[1:]).split('|')
+                message, time1 = str(message).split('|')
                 print(f"initial message received: {message}")
                 if message == '#':
                     ntp_time = request_time()
                     data = (f"{ntp_time}")
                     send_data(conn, secret_key, data)
                     break
+            #
+            while True:
+                message = recv_data(conn, secret_key)
 
-            message = recv_data(conn, secret_key)
-            #position, action, dancer_id, delay = str(message[1:]).split('|')    #to segregate each data
-            #print(f"receive message from laptop: \ndancer id: {dancer_id} \nposition: {position} \naction: {action} \ndelay: {delay}s \n")
+                if message == 'bye-bye, close':
+                    finish = True
+                    break
 
-            if action == 'bye-bye, close':
-                break            
-
-            timestamp, raw, QUATW, QUATX, QUATY, QUATZ, ACCELX, ACCELY, ACCELZ, GYROX, GYROY, GYROZ, dancer_id = str(message).split('|')    #to segregate each data
-            print(f"received message from laptop: \ndancer ID: {dancer_id}\ntimestamp: {timestamp} \nraw: {raw} \n QUAT W: {QUATW} \n QUAT X: {QUATX} \n QUAT Y: {QUATY} \n QUAT Z: {QUATZ}")
-            print(f"ACCEL X: {ACCELX} \nACCEL Y: {ACCELY} \n ACCELZ: {ACCELZ} \n GYRO X: {GYROX} \n GYRO Y: {GYROY} \n GYRO Z: {GYROZ}")
-            #file.write(position + ',' + action + ',' + dancer_id + ',' + str(delay) + '\n')
-            file.write(timestamp + ',' + raw + ',' + QUATW + ',' + QUATX + ',' + QUATY + ',' + QUATZ + ',' + ACCELX + ',' + ACCELY + ',' + ACCELZ + ',' + GYROX + ',' + GYROY + ',' + GYROZ + ',' + dancer_id + '\n')
-
-            #index += 1
+                timestamp, raw, QUATW, QUATX, QUATY, QUATZ, ACCELX, ACCELY, ACCELZ, GYROX, GYROY, GYROZ, dancer_id = str(message).split('|')    #to segregate each data
+                print(f"received message from laptop:\ndancer ID: {dancer_id}\ntimestamp: {timestamp}\nraw: {raw}\nQUAT W: {QUATW}\nQUAT X: {QUATX}\nQUAT Y: {QUATY}\nQUAT Z: {QUATZ}")
+                print(f"ACCEL X: {ACCELX}\nACCEL Y: {ACCELY}\nACCELZ: {ACCELZ}\nGYRO X: {GYROX}\nGYRO Y: {GYROY}\nGYRO Z: {GYROZ}\n\n")
+                #file.write(position + ',' + action + ',' + dancer_id + ',' + str(delay) + '\n')
+                file.write(timestamp + ',' + raw + ',' + QUATW + ',' + QUATX + ',' + QUATY + ',' + QUATZ + ',' + ACCELX + ',' + ACCELY + ',' + ACCELZ + ',' + GYROX + ',' + GYROY + ',' + GYROZ + ',' + dancer_id + '\n')
+            if finish == True:
+                break
 
     except (ConnectionError, ConnectionRefusedError):
         print("error, connection lost")
@@ -57,7 +59,7 @@ def threaded_client(conn, secret_key, server_socket):
 
     conn.close()  # close the connection
     file.close()
-    print("connection closed")
+    print(f"connection closed for thread: {ThreadCount}")
 
 #====================================================================================================================================================================
 def padding(data):
@@ -136,9 +138,9 @@ def main():
 
             conn, address = server_socket.accept()  # accept new connection
             print('Connected to: ' + address[0] + ':' + str(address[1]))
-            start_new_thread(threaded_client, (conn, secret_key, server_socket))
             ThreadCount += 1
             print('Thread Number: ' + str(ThreadCount))
+            start_new_thread(threaded_client, (conn, secret_key, server_socket, ThreadCount))
 
     except:
         print("closing connection")

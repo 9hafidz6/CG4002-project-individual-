@@ -15,9 +15,6 @@ import ntplib
 import math
 import threading
 
-ACTIONS = ['zigzag', 'rocket', 'hair', 'shouldershrug', 'zigzag', 'bye-bye, close']
-POSITIONS = ['1', '2', '3', '1', '2', '1']
-
 START = ' '
 MESSAGE = ' '
 
@@ -36,30 +33,34 @@ def client_program(secret_key, port_num, dancer_id):
         while client_socket.fileno() != -1:
             global START
             global MESSAGE
-            test_str = ' '
+
             #create a while loop to wait for start to get RTT time
+            #once start flag received, break and receive message from beetle process
             while True:
                 while START == ' ':
                     pass
                 user_action = START
                 timer = time.time()
                 data = (f"#|{timer}")
+                print(f"data")
                 send_data(client_socket,secret_key,data)
-                START = ' '
+                START = ' ' #empty START
                 if user_action == '#':
                     message = recv_data(client_socket,secret_key)
                     print(f"message received: {message}\n") #receive NTP timing from ultraServer
                     break
 
+            #create while loop for to receive all messsage from beetle process
+            while True:
                 while MESSAGE == ' ':
                     pass
+                if MESSAGE == 'bye-bye, close':
+                    data = (f"bye-bye, close")
+                    send_data(client_socket,secret_key,data)
+                    break
                 data = (f"{MESSAGE}|{dancer_id}")
                 send_data(client_socket,secret_key,data)
-                test_str = MESSAGE
                 MESSAGE = ' '
-
-                if test_str == 'bye-bye, close':
-                    break
             break
 
     except (ConnectionError, ConnectionRefusedError):
@@ -70,7 +71,7 @@ def client_program(secret_key, port_num, dancer_id):
     client_socket.close()  # close the connection
     print("client connection closed")
 
-#listen to localhost python (beetle process)
+#listen to beetle process, localhost
 def server_program():
     host = '127.0.0.1'
     port = 8081
@@ -83,9 +84,13 @@ def server_program():
         while server_socket.fileno() != -1:
             global START
             global MESSAGE
-            START = conn.recv(1024).decode('utf8')
-            print(f"message from beetle part 1: {START}\n")
-
+            #wait for start flag
+            while True:
+                START = conn.recv(1024).decode('utf8')
+                print(f"message from beetle part 1: {START}\n")
+                if START == '#':
+                    break
+            #wait until all message from beetle process finish
             while True:
                 MESSAGE = conn.recv(1024).decode('utf8')
                 print(f"message from beetle part 2: {MESSAGE}\n")
@@ -99,14 +104,16 @@ def server_program():
     print("server connection closed")
 
 #====================================================================================================================================================================
+
+#padding to make the message in multiples of 16
 def padding(message):
-    #padding to make the message in multiples of 16
     length = 16 - (len(message) % 16)
     message = message.encode()
     message += bytes([length])*length
     print(f"padding: {message}")
     return message
 
+#decrypt the message
 def decrypt_message(message,key):
     #print("decrpyting message")
     decoded_message = base64.b64decode(message)
@@ -116,8 +123,8 @@ def decrypt_message(message,key):
     #print(f"{decrypt_message}")
     return decrypted_message
 
+#encrypt the message
 def encrypt_message(message, key):
-    #encrypt messagesc
     #print("\t\tencrypting data")
     iv = Random.new().read(AES.block_size)
     cipher = AES.new(key, AES.MODE_CBC, iv)
@@ -125,6 +132,7 @@ def encrypt_message(message, key):
     #print("\t\tdata encrypted")
     return encoded
 
+#pad the data, encrypt and send
 def send_data(conn, secret_key, data):
     data = padding(data)
     data = encrypt_message(data,secret_key)
@@ -132,19 +140,13 @@ def send_data(conn, secret_key, data):
     conn.send(data)
     print("sent data\n")
 
+#receive message from ultra96, decrypt, unpad and decode
 def recv_data(client_socket, secret_key):
     message = client_socket.recv(1024).decode()  #wait to receive message
     message = decrypt_message(message,secret_key)
     message = message[:-message[-1]]    #remove padding
-    message = message.decode('utf8')    #to remove b'1|rocketman|
+    message = message.decode('utf8')    #to remove b'1|rocketman|'
     return message
-
-'''def request_time():
-    c= ntplib.NTPClient()
-    response = c.request('pool.ntp.org', version = 3)
-    #for attr in dir(response):
-        #print("remote.%s = %r" % (attr, getattr(response, attr)))
-    return response.orig_time'''
 
 #====================================================================================================================================================================
 def main():
