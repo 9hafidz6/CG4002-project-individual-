@@ -29,7 +29,6 @@ def client_program(secret_key, port_num, dancer_id):
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # instantiate
     client_socket.connect((host, port))  # connect to the server
 
-    index = 0
     #start_time = 0
     RTT = 0
 
@@ -37,30 +36,31 @@ def client_program(secret_key, port_num, dancer_id):
         while client_socket.fileno() != -1:
             global START
             global MESSAGE
+            test_str = ' '
             #create a while loop to wait for start to get RTT time
             while True:
                 while START == ' ':
                     pass
                 user_action = START
                 timer = time.time()
-                data = (f"#{user_action}|{timer}")
+                data = (f"#|{timer}")
                 send_data(client_socket,secret_key,data)
                 START = ' '
-                if user_action == 'start':
+                if user_action == '#':
                     message = recv_data(client_socket,secret_key)
                     print(f"message received: {message}\n") #receive NTP timing from ultraServer
                     break
 
-            while MESSAGE == ' ':
-                pass
-            data = (f"{MESSAGE}|{dancer_id}|1.5")
-            send_data(client_socket,secret_key,data)
-            MESSAGE = ' '
+                while MESSAGE == ' ':
+                    pass
+                data = (f"{MESSAGE}|{dancer_id}")
+                send_data(client_socket,secret_key,data)
+                test_str = MESSAGE
+                MESSAGE = ' '
 
-            if ACTIONS[index] == 'bye-bye, close':
-                break
-
-            index += 1
+                if test_str == 'bye-bye, close':
+                    break
+            break
 
     except (ConnectionError, ConnectionRefusedError):
         print("error, connection lost")
@@ -72,7 +72,7 @@ def client_program(secret_key, port_num, dancer_id):
 
 #listen to localhost python (beetle process)
 def server_program():
-    host = '127.0.0.2'
+    host = '127.0.0.1'
     port = 8081
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind((host, port))
@@ -85,11 +85,14 @@ def server_program():
             global MESSAGE
             START = conn.recv(1024).decode('utf8')
             print(f"message from beetle part 1: {START}\n")
-            MESSAGE = conn.recv(1024).decode('utf8')
-            print(f"message from beetle part 2: {MESSAGE}\n")
 
-            if MESSAGE == '#1|bye-bye, close':
-                break
+            while True:
+                MESSAGE = conn.recv(1024).decode('utf8')
+                print(f"message from beetle part 2: {MESSAGE}\n")
+
+                if MESSAGE == 'bye-bye, close':
+                    break
+            break
     except:
         conn.close()
     conn.close()
@@ -101,7 +104,7 @@ def padding(message):
     length = 16 - (len(message) % 16)
     message = message.encode()
     message += bytes([length])*length
-    #print(f"\t\tpadding: {message}")
+    print(f"padding: {message}")
     return message
 
 def decrypt_message(message,key):
@@ -136,12 +139,12 @@ def recv_data(client_socket, secret_key):
     message = message.decode('utf8')    #to remove b'1|rocketman|
     return message
 
-def request_time():
+'''def request_time():
     c= ntplib.NTPClient()
     response = c.request('pool.ntp.org', version = 3)
     #for attr in dir(response):
         #print("remote.%s = %r" % (attr, getattr(response, attr)))
-    return response.orig_time
+    return response.orig_time'''
 
 #====================================================================================================================================================================
 def main():

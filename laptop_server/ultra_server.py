@@ -15,9 +15,6 @@ from Crypto import Random
 import math
 import ntplib
 
-ACTIONS = ['zigzag', 'rocket', 'hair', 'shouldershrug', 'zigzag', 'rocket']
-POSITIONS = ['1 2 3', '3 2 1', '2 3 1', '3 1 2', '1 3 2', '2 1 3']
-
 def threaded_client(conn, secret_key, server_socket):
     file = open("raw_data.txt", "a+")
     #index = 0
@@ -31,19 +28,24 @@ def threaded_client(conn, secret_key, server_socket):
                 message = recv_data(conn, secret_key)
                 message, time1 = str(message[1:]).split('|')
                 print(f"initial message received: {message}")
-                if message == 'start':
+                if message == '#':
                     ntp_time = request_time()
                     data = (f"{ntp_time}")
                     send_data(conn, secret_key, data)
                     break
 
             message = recv_data(conn, secret_key)
-            position, action, dancer_id, delay = str(message[1:]).split('|')    #to segregate each data
-            print(f"receive message from laptop: \ndancer id: {dancer_id} \nposition: {position} \naction: {action} \ndelay: {delay}s \n")
-            file.write(position + ',' + action + ',' + dancer_id + ',' + str(delay) + '\n')
+            #position, action, dancer_id, delay = str(message[1:]).split('|')    #to segregate each data
+            #print(f"receive message from laptop: \ndancer id: {dancer_id} \nposition: {position} \naction: {action} \ndelay: {delay}s \n")
 
             if action == 'bye-bye, close':
-                break
+                break            
+
+            timestamp, raw, QUATW, QUATX, QUATY, QUATZ, ACCELX, ACCELY, ACCELZ, GYROX, GYROY, GYROZ, dancer_id = str(message).split('|')    #to segregate each data
+            print(f"received message from laptop: \ndancer ID: {dancer_id}\ntimestamp: {timestamp} \nraw: {raw} \n QUAT W: {QUATW} \n QUAT X: {QUATX} \n QUAT Y: {QUATY} \n QUAT Z: {QUATZ}")
+            print(f"ACCEL X: {ACCELX} \nACCEL Y: {ACCELY} \n ACCELZ: {ACCELZ} \n GYRO X: {GYROX} \n GYRO Y: {GYROY} \n GYRO Z: {GYROZ}")
+            #file.write(position + ',' + action + ',' + dancer_id + ',' + str(delay) + '\n')
+            file.write(timestamp + ',' + raw + ',' + QUATW + ',' + QUATX + ',' + QUATY + ',' + QUATZ + ',' + ACCELX + ',' + ACCELY + ',' + ACCELZ + ',' + GYROX + ',' + GYROY + ',' + GYROZ + ',' + dancer_id + '\n')
 
             #index += 1
 
