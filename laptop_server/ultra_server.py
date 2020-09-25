@@ -17,14 +17,13 @@ import ntplib
 
 def threaded_client(conn, secret_key, server_socket, ThreadCount):
     file = open("raw_data.txt", "a+")
-    #index = 0
 
     start_time = 0
     delay = 0
 
     try:
         while server_socket.fileno() != -1:
-            #finish = False
+            finish = False
             #wait for start of dance, get ntp timing and send back to get rtt and offset
             while True:
                 message = recv_data(conn, secret_key)
@@ -44,12 +43,12 @@ def threaded_client(conn, secret_key, server_socket, ThreadCount):
                 print(f"ACCEL X: {ACCELX}\nACCEL Y: {ACCELY}\nACCELZ: {ACCELZ}\nGYRO X: {GYROX}\nGYRO Y: {GYROY}\nGYRO Z: {GYROZ}\n\n")
 
                 if raw == 'bye-bye':
-                    #finish = True
+                    finish = True
                     break
 
                 file.write(timestamp + ',' + raw + ',' + QUATW + ',' + QUATX + ',' + QUATY + ',' + QUATZ + ',' + ACCELX + ',' + ACCELY + ',' + ACCELZ + ',' + GYROX + ',' + GYROY + ',' + GYROZ + ',' + dancer_id + '\n')
-            #if finish == True:
-                #break
+            if finish == True:
+                break
 
     except (ConnectionError, ConnectionRefusedError):
         print("error, connection lost")

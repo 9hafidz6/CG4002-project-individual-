@@ -20,8 +20,7 @@ q = deque()
 #q = []
 
 def client_program(secret_key, port_num, dancer_id):
-    host = '127.0.0.1'  # as both code is running on same pc
-    #host = socket.gethostname()
+    host = '127.0.0.1'  # broadcast on localhost
     port = int(port_num)  # socket server port number
 
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # TCP socket
@@ -43,7 +42,7 @@ def client_program(secret_key, port_num, dancer_id):
                     message = recv_data(client_socket, secret_key)
                     print(f"message received: {message}\n") #receive NTP timing from ultraServer
                     start = True
-                    time.sleep(1)
+                    time.sleep(0.5)
                     continue
 
                 queue_data = q.popleft()
@@ -52,9 +51,8 @@ def client_program(secret_key, port_num, dancer_id):
                 timestamp, raw, QUATW, QUATX, QUATY, QUATZ, ACCELX, ACCELY, ACCELZ, GYROX, GYROY, GYROZ = str(queue_data).split('|')
                 if raw == 'bye-bye':
                     #finish = True
-                    q.popleft()
                     break
-                time.sleep(1)
+                time.sleep(0.5)
             #if finish == True:
                 #break
 
@@ -69,23 +67,27 @@ def client_program(secret_key, port_num, dancer_id):
 #listen to beetle process, localhost
 def server_program():
     host = '127.0.0.1'
-    port = 8081
+    port = 8081 #beetle process is on localhost, port 8081
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind((host, port))
     server_socket.listen(1)
 
     conn, address = server_socket.accept()
     try:
+        #send and receive from the beetle process, stop and wait protocol
         while server_socket.fileno() != -1:
             beetle_msg = conn.recv(1024).decode('utf8')
             timestamp, raw, QUATW, QUATX, QUATY, QUATZ, ACCELX, ACCELY, ACCELZ, GYROX, GYROY, GYROZ = str(beetle_msg).split('|')
+            conn.send(' '.encode()) #send back arbitrary data
             if raw == '#':
                 q.append(beetle_msg)
                 while True:
                     #if starting flag detected, put all message into queue
                     beetle_msg = conn.recv(1024).decode('utf8')
+                    timestamp, raw, QUATW, QUATX, QUATY, QUATZ, ACCELX, ACCELY, ACCELZ, GYROX, GYROY, GYROZ = str(beetle_msg).split('|')
+                    conn.send(' '.encode())
                     q.append(beetle_msg)
-                    if beetle_msg == 'bye-bye':
+                    if raw == 'bye-bye':
                         break
     except:
         conn.close()

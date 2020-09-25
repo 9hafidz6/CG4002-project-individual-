@@ -19,24 +19,30 @@ def main():
     client_socket.connect((host, port_num))  # connect to the server
     print('connected\n')
 
-    index = 0
     #open the csv file
     with open('xavier_elbowlock.csv', mode = 'r') as file:
         csvFile = csv.DictReader(file)
 
+        timer1 = time.time()    #to check how long it takes to transmit the data
+
         for lines in csvFile:
-            data = (f"{lines['Timestamp (ns)']}|{lines['raw']}|{lines['QUAT W']}|{lines['QUAT X']}|{lines['QUAT Y']}|{lines['QUAT Z']}|{lines['ACCEL X']}|{lines['ACCEL Y']}|{lines['ACCEL Z']}|{lines['GYRO X']}|{lines['GYRO Y']}|{lines['GYRO Z']}")
+            #data = (f"{lines['Timestamp (ns)']}|{lines['raw']}|{lines['QUAT W']}|{lines['QUAT X']}|{lines['QUAT Y']}|{lines['QUAT Z']}|{lines['ACCEL X']}|{lines['ACCEL Y']}|{lines['ACCEL Z']}|{lines['GYRO X']}|{lines['GYRO Y']}|{lines['GYRO Z']}")
+            data = (f"{time.time()}|{lines['raw']}|{lines['QUAT W']}|{lines['QUAT X']}|{lines['QUAT Y']}|{lines['QUAT Z']}|{lines['ACCEL X']}|{lines['ACCEL Y']}|{lines['ACCEL Z']}|{lines['GYRO X']}|{lines['GYRO Y']}|{lines['GYRO Z']}")
+
             data = data.encode()
             print(f"data sent: {data}")
+
             client_socket.send(data)
+            message = client_socket.recv(1024).decode()
 
             if lines['raw'] == 'bye-bye':
                 break
 
-            time.sleep(0.005)
-            #index += 1
+        timer2 = time.time()
+        end_time = timer2 - timer1
+        
     client_socket.close()
-    print("python process ended")
+    print(f"python process ended in {end_time} seconds")
 
 if __name__ == '__main__':
     main()
