@@ -24,32 +24,32 @@ def threaded_client(conn, secret_key, server_socket, ThreadCount):
 
     try:
         while server_socket.fileno() != -1:
-            finish = False
+            #finish = False
             #wait for start of dance, get ntp timing and send back to get rtt and offset
             while True:
                 message = recv_data(conn, secret_key)
-                message, time1 = str(message).split('|')
+                timestamp, raw, QUATW, QUATX, QUATY, QUATZ, ACCELX, ACCELY, ACCELZ, GYROX, GYROY, GYROZ, dancer_id = str(message).split('|')    #to segregate each data
                 print(f"initial message received: {message}")
-                if message == '#':
+                if raw == '#':
                     ntp_time = request_time()
                     data = (f"{ntp_time}")
                     send_data(conn, secret_key, data)
                     break
-            #
+            #after dance start, dance data should come in, write into text file
             while True:
                 message = recv_data(conn, secret_key)
-
-                if message == 'bye-bye, close':
-                    finish = True
-                    break
 
                 timestamp, raw, QUATW, QUATX, QUATY, QUATZ, ACCELX, ACCELY, ACCELZ, GYROX, GYROY, GYROZ, dancer_id = str(message).split('|')    #to segregate each data
                 print(f"received message from laptop:\ndancer ID: {dancer_id}\ntimestamp: {timestamp}\nraw: {raw}\nQUAT W: {QUATW}\nQUAT X: {QUATX}\nQUAT Y: {QUATY}\nQUAT Z: {QUATZ}")
                 print(f"ACCEL X: {ACCELX}\nACCEL Y: {ACCELY}\nACCELZ: {ACCELZ}\nGYRO X: {GYROX}\nGYRO Y: {GYROY}\nGYRO Z: {GYROZ}\n\n")
-                #file.write(position + ',' + action + ',' + dancer_id + ',' + str(delay) + '\n')
+
+                if raw == 'bye-bye':
+                    #finish = True
+                    break
+
                 file.write(timestamp + ',' + raw + ',' + QUATW + ',' + QUATX + ',' + QUATY + ',' + QUATZ + ',' + ACCELX + ',' + ACCELY + ',' + ACCELZ + ',' + GYROX + ',' + GYROY + ',' + GYROZ + ',' + dancer_id + '\n')
-            if finish == True:
-                break
+            #if finish == True:
+                #break
 
     except (ConnectionError, ConnectionRefusedError):
         print("error, connection lost")

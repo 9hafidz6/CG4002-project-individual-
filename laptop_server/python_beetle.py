@@ -7,17 +7,6 @@ import time
 import socket
 import csv
 
-'''
-#reading from csv file, actual data
-with open('xavier_elbowlock.csv', mode = 'r') as file:
-    csvFile = csv.DictReader(file)
-    index = 0
-    for lines in csvFile:
-        print(lines['Timestamp (ns)'])
-        index += 1
-        if index == 5:
-            break
-'''
 #==============================================================================================================================================
 def main():
     #main program
@@ -26,7 +15,7 @@ def main():
     port_num = 8081
     index = 0
 
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # instantiate
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # TCP socket
     client_socket.connect((host, port_num))  # connect to the server
     print('connected\n')
 
@@ -35,26 +24,17 @@ def main():
     with open('xavier_elbowlock.csv', mode = 'r') as file:
         csvFile = csv.DictReader(file)
 
-        data = "#" #might only be for the first line
-        data = data.encode()
-        client_socket.send(data)
-        print("start flag sent")
-        time.sleep(1)
-
         for lines in csvFile:
-            if index == 5:
-                data = ("bye-bye, close")
-                print(f"data sent: {data}")
-                data = data.encode()
-                client_socket.send(data)
-                break
-
             data = (f"{lines['Timestamp (ns)']}|{lines['raw']}|{lines['QUAT W']}|{lines['QUAT X']}|{lines['QUAT Y']}|{lines['QUAT Z']}|{lines['ACCEL X']}|{lines['ACCEL Y']}|{lines['ACCEL Z']}|{lines['GYRO X']}|{lines['GYRO Y']}|{lines['GYRO Z']}")
             data = data.encode()
             print(f"data sent: {data}")
             client_socket.send(data)
-            time.sleep(1)
-            index += 1
+
+            if lines['raw'] == 'bye-bye':
+                break
+
+            time.sleep(0.005)
+            #index += 1
     client_socket.close()
     print("python process ended")
 
