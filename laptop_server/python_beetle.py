@@ -16,7 +16,7 @@ def main():
     index = 0
 
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # TCP socket
-    client_socket.connect((host, port_num))  # connect to the server
+    client_socket.connect((host, port_num))  # connect to the laptop client
     print('connected\n')
 
     #open the csv file
@@ -30,9 +30,9 @@ def main():
             data = (f"{time.time()}|{lines['raw']}|{lines['QUAT W']}|{lines['QUAT X']}|{lines['QUAT Y']}|{lines['QUAT Z']}|{lines['ACCEL X']}|{lines['ACCEL Y']}|{lines['ACCEL Z']}|{lines['GYRO X']}|{lines['GYRO Y']}|{lines['GYRO Z']}")
 
             data = data.encode()
+            client_socket.send(data)
             print(f"data sent: {data}")
 
-            client_socket.send(data)
             message = client_socket.recv(1024).decode()
 
             if lines['raw'] == 'bye-bye':
@@ -40,7 +40,7 @@ def main():
 
         timer2 = time.time()
         end_time = timer2 - timer1
-        
+
     client_socket.close()
     print(f"python process ended in {end_time} seconds")
 
