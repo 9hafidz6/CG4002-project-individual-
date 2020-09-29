@@ -30,22 +30,36 @@ def client_program(secret_key, port_num, dancer_id):
     try:
         while client_socket.fileno() != -1:
             start = False
+            final_offset = 0
             #finish = False
             while q:
+                #if statement only executes once if start message received
                 if not start:
-                    timer = time.time()
+                    timer1 = time.time()
                     queue_data = q.popleft()
+                    timestamp, raw, QUATW, QUATX, QUATY, QUATZ, ACCELX, ACCELY, ACCELZ, GYROX, GYROY, GYROZ = str(queue_data).split('|')
+                    offset1 = timer1 - float(timestamp) #delay from beetle to laptop, delay within laptop is ignored
                     data = (f"{queue_data}|{dancer_id}")
-                    send_data(client_socket,secret_key,data)
 
-                    message = recv_data(client_socket, secret_key)  #receive NTP timing from ultraServer
-                    print(f"message received: {message}\n")
-                    start = True
-                    time.sleep(0.5)
+                    if raw == '#':
+                        send_data(client_socket,secret_key,data)  #send the start data to server
+
+                        message = recv_data(client_socket, secret_key)  #receive NTP timing from ultraServer
+
+                        timer4 = time.time() + offset1 #supposed time of beetle at this point
+
+                        RTT = (float(message) - float(timestamp)) + (float(message) - timer4)
+                        one_way = float(RTT/2)
+                        final_offset = float(message) - (float(timestamp) + one_way)
+
+                        print(f"message received: {message}\n")
+                        start = True
+                        time.sleep(0.5)
                     continue
 
                 queue_data = q.popleft()
-                data = (f"{queue_data}|{dancer_id}")
+                data = (f"{queue_data}|{dancer_id}|{final_offset}")
+                #data = (f"{queue_data}|{dancer_id}")
                 send_data(client_socket,secret_key,data)
                 timestamp, raw, QUATW, QUATX, QUATY, QUATZ, ACCELX, ACCELY, ACCELZ, GYROX, GYROY, GYROZ = str(queue_data).split('|')
                 if raw == 'bye-bye':
@@ -89,7 +103,8 @@ def server_program():
                     q.append(beetle_msg)
                     #if end of move detected
                     if raw == 'bye-bye':
-                        break
+                        print("dance move ended\n")
+                        #break
     except:
         conn.close()
         print("connection error")

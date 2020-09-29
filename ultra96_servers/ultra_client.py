@@ -15,102 +15,106 @@ from Crypto import Random
 import math
 
 ACTIONS = ['zigzag', 'rocket', 'hair', 'shouldershrug', 'elbowlock']
-POSITIONS = ['3 2 1', '1 2 3', '2 3 1', '3 1 2', '1 3 2', '2 1 3']
-DELAY = ['1.89','2.43','1.5','0.54','2','4.5']
+POSITIONS = ['3 2 1', '1 2 3', '2 3 1', '3 1 2', '1 3 2']
+DELAY = ['1.89','2.43','1.5','0.54','2']
+#dancer_id = ['1','2','3','1','2']
 
-class Client(threading.Thread):
-    def __init__(self,ser_addr, port_num, secret_key):
-        super(Client, self).__init__()
-        self.key = secret_key
+def threaded_client(ser_addr, ser_port, secret_key):
+    #connect to eval server
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # TCP socket
+    client_socket.connect((ser_addr, ser_port))  # connect to the server
 
-        # setup moves
-        self.actions = ACTIONS
-        self.position = POSITIONS
-
-        #creating socket
-        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        #connecting
-        self.setup_connection(ser_addr, port_num)
-
-    def run(self):
-        index = 0   #just for testing
-
-        while self.check_connection() != -1 and index < len(POSITIONS) - 1:
+    try:
+        index = 0
+        user_prompt = input('->')
+        while client_socket.fileno() != -1 and index < len(POSITIONS) - 1:
             data = (f"#{POSITIONS[index]}|{ACTIONS[index]}|{DELAY[index]}")
-            data = self.padding(data)
-            data = self.encrypt_message(data)
-            user_promt = input('->')
-            self.send_message(data)
+            send_data(client_socket, secret_key, data)
 
-            message = self.receive_message()
-            print(message)
-
+            message = client_socket.recv(1024).decode()
+            print(f"{message}")
             index += 1
 
-        print('closing connection')
-        self.close_connection()
+    except (ConnectionError, ConnectionRefusedError):
+        print("error, connection lost")
+        client_socket.close()
+    print("closing connection")
+    client_socket.close()
 
-    def padding(self,data):
-        #pad the data to size of 16
-        length = 16 - (len(data) % 16)
-        data = data.encode()
-        data += bytes('\n', 'utf8')*length   #if padding of \0x10 for example, the evaluation server will not unpad properly
-        print("padded data: " + str(data))
-        return data
+def dashboard_client():
+    #connect to dashboard MongoDB atlas
+    print("test")
 
-    def encrypt_message(self, message):
-        #encrypt the message with address
-        print("encrypting message")
-        iv = Random.new().read(AES.block_size)
-        cipher = AES.new(self.key, AES.MODE_CBC, iv)
-        encoded = base64.b64encode(iv + cipher.encrypt(message))
-        return encoded
+#====================================================================================================================================================================
 
-    def setup_connection(self, ser_addr, port_num):
-        #connect to server via TCP
-        print("connection setup")
-        try:
-            self.s.connect((ser_addr,port_num))
-        except:
-            print("unable to connect to server")
-        else:
-            print("connected")
+#padding to make the message in multiples of 16
+def padding(message):
+    length = 16 - (len(message) % 16)
+    message = message.encode()
+    message += bytes('\n', 'utf8')*length   #if padding of \0x10 for example, the evaluation server will not unpad properly
+    print(f"padding: {message}")
+    return message
 
-    def check_connection(self):
-        #check connection
-        return self.s.fileno()
+#decrypt the message
+def decrypt_message(message,key):
+    #print("decrpyting message")
+    decoded_message = base64.b64decode(message)
+    iv = decoded_message[:16]
+    cipher = AES.new(key, AES.MODE_CBC, iv)
+    decrypted_message = cipher.decrypt(decoded_message[16:])
+    #print(f"{decrypt_message}")
+    return decrypted_message
 
-    def close_connection(self):
-        #close socket connection
-        print("closing connection")
-        self.s.close()
+#encrypt the message
+def encrypt_message(message, key):
+    #print("\t\tencrypting data")
+    iv = Random.new().read(AES.block_size)
+    cipher = AES.new(key, AES.MODE_CBC, iv)
+    encoded = base64.b64encode(iv + cipher.encrypt(message))
+    print(f"sending encrypted data: {encoded}")
+    return encoded
 
-    def send_message(self, cipher_text):
-        #send encrypted message to server in a defined format
-        print("sending encrpyted message")
-        self.s.send(cipher_text)
-        print("message sent")
+#pad the data, encrypt and send
+def send_data(conn, secret_key, data):
+    data = padding(data)
+    data = encrypt_message(data,secret_key)
+    conn.send(data)
+    print("sent data\n")
 
-    def receive_message(self):
-        #receive message from server
-        return self.s.recv(1024).decode()
+#receive message from ultra96, decrypt, unpad and decode
+def recv_data(client_socket, secret_key):
+    message = client_socket.recv(1024).decode()  #wait to receive message
+    message = decrypt_message(message,secret_key)
+    message = message[:-message[-1]]    #remove padding
+    message = message.decode('utf8')    #to remove b'1|rocketman|'
+    return message
 
+#====================================================================================================================================================================
 def main():
     ser_addr = input('server address->')
     ser_port = input('server port->')
-    #ser_port = int(ser_port)
 
     #dash_addr = input('dashboard address->')
     #dash_port = input('dashboard port->')
-    #dash_port = int(dash_port)
-    secret_key = b'0123456789ABCDEF' #dummy secret key, 16 bytes
 
+    secret_key = b'0123456789ABCDEF' #dummy secret key, 16 bytes
+    '''
     evaluation_thread = Client(ser_addr, int(ser_port), secret_key)
     evaluation_thread.start() #start the thread
+    '''
+    t1 = threading.Thread(target=threaded_client, args=(ser_addr, int(ser_port), secret_key))
+    #t2 = threading.Thread(target=threaded_client, args=(' ', ' ', secret_key))
+    #t3 = threading.Thread()
 
-    #start another thread to pass data to dashboard
-    #dashboard_thread = Client(dash_addr, dash_port, secret_key)
-    #dashboard_thread.start()
+    t1.start()
+    #t2.start()
+    #t3.start()
+
+    t1.join()
+    #t2.join()
+    #t3.join()
+
+    print("done!")
 
 if __name__ == '__main__':
     main()
