@@ -5,8 +5,8 @@ import random
 import time
 
 import socket
-#from _thread import *
 import threading
+from datetime import datetime
 
 import base64
 import numpy as np
@@ -15,6 +15,8 @@ from Crypto.Cipher import AES
 from Crypto import Random
 import math
 import ntplib
+
+#start_count = 0
 
 #def threaded_server(port_num, conn, secret_key, server_socket, ThreadCount):
 def threaded_server(port_num, secret_key, ThreadCount):
@@ -40,14 +42,14 @@ def threaded_server(port_num, secret_key, ThreadCount):
             raw = " "
             final_time = 0
             #wait for start of dance, get ntp timing and send back to get rtt and offset
-            #while True:
             message = recv_data(conn, secret_key)
+            #start_count += 1
             timestamp, raw, QUATW, QUATX, QUATY, QUATZ, ACCELX, ACCELY, ACCELZ, GYROX, GYROY, GYROZ, dancer_id = str(message).split('|')    #to segregate each data
             print(f"start message received: {message}")
             ntp_time = request_time()
             data = (f"{ntp_time}")
             send_data(conn, secret_key, data)
-            #break
+            print(f"NTP time data sent: {data}\n")
 
             #after dance start, dance data should come in, write into text file
             while True:
@@ -58,15 +60,16 @@ def threaded_server(port_num, secret_key, ThreadCount):
                 print(f"ACCEL X: {ACCELX}\nACCEL Y: {ACCELY}\nACCELZ: {ACCELZ}\nGYRO X: {GYROX}\nGYRO Y: {GYROY}\nGYRO Z: {GYROZ}\n\n")
                 print(f"final offset: {final_offset}\n")
 
+                final_time = float(timestamp) + float(final_offset)
+
+                file.write(timestamp + ',' + raw + ',' + QUATW + ',' + QUATX + ',' + QUATY + ',' + QUATZ + ',' + ACCELX + ',' + ACCELY + ',' + ACCELZ + ',' + GYROX + ',' + GYROY + ',' + GYROZ + ',' + dancer_id + ',' + str(final_time) + '\n')
+
                 if raw == 'bye-bye':
                     #finish = True
-                    final_time = float(timestamp) + float(final_offset)
                     print(f"dance finished at: {final_time}")
                     break
 
-                file.write(timestamp + ',' + raw + ',' + QUATW + ',' + QUATX + ',' + QUATY + ',' + QUATZ + ',' + ACCELX + ',' + ACCELY + ',' + ACCELZ + ',' + GYROX + ',' + GYROY + ',' + GYROZ + ',' + dancer_id + '\n')
             if finish == True:
-                #print(f"dance finished at: {final_time}")
                 break
 
     except (ConnectionError, ConnectionRefusedError):
@@ -110,7 +113,6 @@ def send_data(conn, secret_key, data):
     data = padding(data)
     data = encrypt_message(data,secret_key)
     conn.send(data)
-    print("NTP time data sent\n")
 
 def recv_data(client_socket, secret_key):
     message = client_socket.recv(1024).decode()  #wait to receive message
@@ -120,10 +122,16 @@ def recv_data(client_socket, secret_key):
     return message
 
 def request_time():
-    c= ntplib.NTPClient()
+    '''
+    while start_count < 2:
+        pass
+    start_count = 0
+    '''
+    c = ntplib.NTPClient()
     response = c.request('pool.ntp.org', version = 3)
     #for attr in dir(response):
         #print("remote.%s = %r" % (attr, getattr(response, attr)))
+    #datetime.fromtimestamp(response.orig_time).strftime("%A, %B %d, %Y %I:%M:%S")
     return response.orig_time
 #====================================================================================================================================================================
 def main():
@@ -167,6 +175,7 @@ def main():
     t1 = threading.Thread(target=threaded_server,args=(8090, secret_key, 1))
     t2 = threading.Thread(target=threaded_server,args=(8091, secret_key, 2))
     t3 = threading.Thread(target=threaded_server,args=(8092, secret_key, 3))
+    #might need to create another thread to communicate with ML
 
     t1.start()
     t2.start()

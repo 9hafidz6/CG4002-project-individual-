@@ -18,6 +18,7 @@ import threading
 from collections import deque
 q = deque()
 
+#client program to connect to ultra96 server
 def client_program(secret_key, port_num, dancer_id):
     host = '127.0.0.1'  # broadcast on localhost
     port = int(port_num)  # socket server port number
@@ -35,10 +36,10 @@ def client_program(secret_key, port_num, dancer_id):
             while q:
                 #if statement only executes once if start message received
                 if not start:
-                    timer1 = time.time()
-                    queue_data = q.popleft()
+                    timer1 = time.time()    #get local time
+                    queue_data = q.popleft()    #get the most recent data from deque
                     timestamp, raw, QUATW, QUATX, QUATY, QUATZ, ACCELX, ACCELY, ACCELZ, GYROX, GYROY, GYROZ = str(queue_data).split('|')
-                    offset1 = timer1 - float(timestamp) #delay from beetle to laptop, delay within laptop is ignored
+                    offset1 = timer1 - float(timestamp) #one way delay from beetle to laptop, delay within laptop is ignored
                     data = (f"{queue_data}|{dancer_id}")
 
                     if raw == '#':
@@ -46,8 +47,7 @@ def client_program(secret_key, port_num, dancer_id):
 
                         message = recv_data(client_socket, secret_key)  #receive NTP timing from ultraServer
 
-                        timer4 = time.time() + offset1 #supposed time of beetle at this point
-
+                        timer4 = time.time() - offset1  #supposed time of beetle at this point
                         RTT = (float(message) - float(timestamp)) + (float(message) - timer4)
                         one_way = float(RTT/2)
                         final_offset = float(message) - (float(timestamp) + one_way)
@@ -73,9 +73,9 @@ def client_program(secret_key, port_num, dancer_id):
         print("error, connection lost")
         client_socket.close()
         #sys.exit(1)
-
-    client_socket.close()  # close the connection
-    print("client connection closed")
+    else:
+        client_socket.close()  # close the connection
+        print("client connection closed")
 
 #listen to beetle process, localhost
 def server_program():
@@ -108,8 +108,9 @@ def server_program():
     except:
         conn.close()
         print("connection error")
-    conn.close()
-    print("server connection closed")
+    else:
+        conn.close()
+        print("server connection closed")
 
 #====================================================================================================================================================================
 

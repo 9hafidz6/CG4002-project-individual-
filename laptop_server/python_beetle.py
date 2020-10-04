@@ -12,7 +12,7 @@ def main():
     #main program
     host = '127.0.0.1'
     port_num = 8081
-    index = 0
+    #index = 0
 
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # TCP socket
     client_socket.connect((host, port_num))  # connect to the laptop client
@@ -37,6 +37,7 @@ def main():
                 message = client_socket.recv(1024).decode()
 
                 if lines['raw'] == 'bye-bye':
+                    print("end of dance move")
                     break
 
             timer2 = time.time()
