@@ -24,7 +24,7 @@ print(f"{data}\n")
 data1 = datetime.fromtimestamp(data).strftime("%A, %B %d, %Y %H:%M:%S")
 print(f"{data1}\n")
 '''
-
+'''
 import collections
 import pymongo
 def makehash():
@@ -40,7 +40,7 @@ print(len(myhash[1]))
 myhash[1] = {}
 #print(myhash[1])
 #print(myhash[1][2])
-
+'''
 
 '''
 myfamily = {
@@ -63,3 +63,14 @@ for x in myfamily["child1"].values():
 
 #print(myfamily["child1"]["name"])
 '''
+x = []
+
+x.insert(3,1)
+x.insert(2,2)
+x.insert(1,3)
+
+print(x)
+
+data = (f"{x[0]} {x[1]} {x[2]}")
+
+print(data)

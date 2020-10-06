@@ -3,11 +3,9 @@ import os
 import sys
 import random
 import time
-
 import socket
 import threading
 from datetime import datetime
-
 import base64
 import numpy as np
 import pandas as pd
@@ -55,14 +53,17 @@ def threaded_server(port_num, secret_key, ThreadCount):
             while True:
                 message = recv_data(conn, secret_key)
 
-                timestamp, raw, QUATW, QUATX, QUATY, QUATZ, ACCELX, ACCELY, ACCELZ, GYROX, GYROY, GYROZ, dancer_id, final_offset = str(message).split('|')    #to segregate each data
-                print(f"received message from laptop:\ndancer ID: {dancer_id}\ntimestamp: {timestamp}\nraw: {raw}\nQUAT W: {QUATW}\nQUAT X: {QUATX}\nQUAT Y: {QUATY}\nQUAT Z: {QUATZ}")
+                timestamp, raw, QUATW, QUATX, QUATY, QUATZ, ACCELX, ACCELY, ACCELZ, GYROX, GYROY, GYROZ, dancer_id, final_offset, index = str(message).split('|')    #to segregate each data
+                print(f"received message from laptop:\nindex: {index}\ndancer ID: {dancer_id}\ntimestamp: {timestamp}\nraw: {raw}\nQUAT W: {QUATW}\nQUAT X: {QUATX}\nQUAT Y: {QUATY}\nQUAT Z: {QUATZ}")
                 print(f"ACCEL X: {ACCELX}\nACCEL Y: {ACCELY}\nACCELZ: {ACCELZ}\nGYRO X: {GYROX}\nGYRO Y: {GYROY}\nGYRO Z: {GYROZ}\n\n")
                 print(f"final offset: {final_offset}\n")
 
                 final_time = float(timestamp) + float(final_offset)
 
-                file.write(timestamp + ',' + raw + ',' + QUATW + ',' + QUATX + ',' + QUATY + ',' + QUATZ + ',' + ACCELX + ',' + ACCELY + ',' + ACCELZ + ',' + GYROX + ',' + GYROY + ',' + GYROZ + ',' + dancer_id + ',' + str(final_time) + '\n')
+                file.write(index + ',' + dancer_id + ','+ timestamp + ',' + raw + ',' + QUATW + ',' + QUATX + ',' + QUATY + ',' + QUATZ + ',' + ACCELX + ',' + ACCELY + ',' + ACCELZ + ',' + GYROX + ',' + GYROY + ',' + GYROZ + ',' + str(final_time) + '\n')
+
+                data = ' '
+                send_data(conn, secret_key, data)
 
                 if raw == 'bye-bye':
                     #finish = True
@@ -122,11 +123,6 @@ def recv_data(client_socket, secret_key):
     return message
 
 def request_time():
-    '''
-    while start_count < 2:
-        pass
-    start_count = 0
-    '''
     c = ntplib.NTPClient()
     response = c.request('pool.ntp.org', version = 3)
     #for attr in dir(response):
@@ -138,40 +134,8 @@ def main():
     ThreadCount = 0
     #hard coded for testing purposes, actual run will ask user to input
     secret_key = b'0123456789ABCDEF'
-    '''
-    if len(sys.argv) < 2:
-        print("enter port number: [PORT]")
-        sys.exit()
 
-    port_num = sys.argv[1]
-    #host = socket.gethostname()
-    host = '127.0.0.1'
-
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # get instance
-    try:
-        server_socket.bind((host, int(port_num)))  # bind host address and port together
-    except socket.error as e:
-        print(str(e))
-    print('waiting for connection')
-    # configure server into listen mode
-    server_socket.listen(3)
-
-    #threading
-    try:
-        while server_socket.fileno() != -1:
-            if ThreadCount > 3:
-                break
-
-            conn, address = server_socket.accept()  # accept new connection
-            print('Connected to: ' + address[0] + ':' + str(address[1]))
-            ThreadCount += 1
-            print('Thread Number: ' + str(ThreadCount))
-            start_new_thread(threaded_client, (conn, secret_key, server_socket, ThreadCount))
-    except:
-        print("closing connection")
-        server_socket.close()
-    '''
-    #create 3 threads for each of the dancer, each listening on the loopback address but on different port
+    #create 3 threads for each of the dancer, each listening on the loopback address but on specific port
     t1 = threading.Thread(target=threaded_server,args=(8090, secret_key, 1))
     t2 = threading.Thread(target=threaded_server,args=(8091, secret_key, 2))
     t3 = threading.Thread(target=threaded_server,args=(8092, secret_key, 3))

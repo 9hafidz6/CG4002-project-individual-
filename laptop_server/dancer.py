@@ -3,9 +3,7 @@ import os
 import sys
 import random
 import time
-
 import socket
-
 import base64
 import numpy as np
 import pandas as pd
@@ -27,6 +25,7 @@ def client_program(secret_key, port_num, dancer_id):
     client_socket.connect((host, port))  # connect to the server
 
     RTT = 0
+    index = 0
 
     try:
         while client_socket.fileno() != -1:
@@ -53,21 +52,29 @@ def client_program(secret_key, port_num, dancer_id):
                         final_offset = float(message) - (float(timestamp) + one_way)
 
                         print(f"message received: {message}\n")
+                        index += 1  #to identify which whether its the first dance move or second etc
                         start = True
-                        time.sleep(0.5)
+                        #time.sleep(0.5)
                     continue
 
+                #after start flag send and RTT, offset calculated
                 queue_data = q.popleft()
-                data = (f"{queue_data}|{dancer_id}|{final_offset}")
-                #data = (f"{queue_data}|{dancer_id}")
+                data = (f"{queue_data}|{dancer_id}|{final_offset}|{index}")
                 send_data(client_socket,secret_key,data)
-                timestamp, raw, QUATW, QUATX, QUATY, QUATZ, ACCELX, ACCELY, ACCELZ, GYROX, GYROY, GYROZ = str(queue_data).split('|')
-                if raw == 'bye-bye':
-                    #finish = True
+                timestamp, raw, QUATW, QUATX, QUATY, QUATZ, ACCELX, ACCELY, ACCELZ, GYROX, GYROY, GYROZ = str(queue_data).split('|')    #split data from deque
+                message = recv_data(client_socket, secret_key) #receive arbritrary data from server if dont have this, its too fast and need time delay
+                #if raw data is end flag, then break from deque loop
+                if raw == 'logout':
+                    print("final dance finished")
+                    finish = True
                     break
-                time.sleep(0.5)
-            #if finish == True:
-                #break
+                elif raw == 'bye-bye':
+                    #finish = True
+                    print("dance finished")
+                    break
+                #time.sleep(0.5)
+            if finish == True:
+                break
 
     except (ConnectionError, ConnectionRefusedError):
         print("error, connection lost")
@@ -80,7 +87,7 @@ def client_program(secret_key, port_num, dancer_id):
 #listen to beetle process, localhost
 def server_program():
     host = '127.0.0.1'
-    port = 8081 #beetle process is on localhost, port 8081
+    port = 8081 #communicate with beetle process is on localhost, port 8081
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind((host, port))
     server_socket.listen(1)
