@@ -72,10 +72,9 @@ def client_program(secret_key, port_num, dancer_id):
                     #finish = True
                     print("dance finished")
                     break
-                #time.sleep(0.5)
-            time.sleep(0.001)
             if finish == True:
                 break
+            time.sleep(0.001)
 
     except (ConnectionError, ConnectionRefusedError):
         print("error, connection lost")

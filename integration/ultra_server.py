@@ -16,7 +16,7 @@ import math
 import ntplib
 
 #listen and receive data from client, parse the data and store in txt file
-def threaded_server(port_num, secret_key, ThreadCount):
+def threaded_server(port_num, secret_key, ThreadCount, onRecv=None):
     file = open("raw_data.txt", "a+")
 
     host = '127.0.0.1'
@@ -46,16 +46,16 @@ def threaded_server(port_num, secret_key, ThreadCount):
             ntp_time = request_time()
             data = (f"{ntp_time}")
             send_data(conn, secret_key, data)
-            print(f"NTP time data sent: {data}\n")
+            # print(f"NTP time data sent: {data}\n")
 
             #after dance start, dance data should come in, write into text file
             while True:
                 message = recv_data(conn, secret_key)
 
                 index, dancer_id, final_offset, timestamp, raw, QUATW, QUATX, QUATY, QUATZ, ACCELX, ACCELY, ACCELZ, GYROX, GYROY, GYROZ = str(message).split('|')    #to segregate each data
-                print(f"received message from laptop:\nindex: {index}\ndancer ID: {dancer_id}\ntimestamp: {timestamp}\nraw: {raw}\nQUAT W: {QUATW}\nQUAT X: {QUATX}\nQUAT Y: {QUATY}\nQUAT Z: {QUATZ}")
-                print(f"ACCEL X: {ACCELX}\nACCEL Y: {ACCELY}\nACCELZ: {ACCELZ}\nGYRO X: {GYROX}\nGYRO Y: {GYROY}\nGYRO Z: {GYROZ}\n\n")
-                print(f"final offset: {final_offset}\n")
+                # print(f"received message from laptop:\nindex: {index}\ndancer ID: {dancer_id}\ntimestamp: {timestamp}\nraw: {raw}\nQUAT W: {QUATW}\nQUAT X: {QUATX}\nQUAT Y: {QUATY}\nQUAT Z: {QUATZ}")
+                # print(f"ACCEL X: {ACCELX}\nACCEL Y: {ACCELY}\nACCELZ: {ACCELZ}\nGYRO X: {GYROX}\nGYRO Y: {GYROY}\nGYRO Z: {GYROZ}\n\n")
+                # print(f"final offset: {final_offset}\n")
 
                 data = ' '
                 send_data(conn, secret_key, data)
@@ -71,8 +71,14 @@ def threaded_server(port_num, secret_key, ThreadCount):
 
                     file.write(f"{index},{dancer_id},{timestamp},{raw},{QUATW},{QUATX},{QUATY},{QUATZ},{ACCELX},{ACCELY},{ACCELZ},{GYROX},{GYROY},{GYROZ},{final_time}\n")
 
+                    if onRecv is not None:
+                        processed = {"index": index, "id": dancer_id, "timestamp": timestamp, "raw": raw, "quatw": QUATW, "quatx": QUATX, "quaty": QUATY, "quatz": QUATZ, "accelx": ACCELX,
+                                    "accely": ACCELY, "accelz": ACCELZ, "gyrox": GYROX, "gyroy": GYROY, "gyroz": GYROZ, "finaltime": final_time}
+                        onRecv(processed)
+
             if finish == True:
                 break
+            time.sleep(0.001)
 
     except (ConnectionError, ConnectionRefusedError):
         print("error, connection lost")
@@ -83,10 +89,6 @@ def threaded_server(port_num, secret_key, ThreadCount):
     conn.close()  # close the connection
     file.close()
     print(f"connection closed for thread: {ThreadCount}")
-
-def send_to_ML():
-    #stream data to ML
-    print("test")
 
 #====================================================================================================================================================================
 #padding to make the message in multiples of 16
@@ -150,18 +152,14 @@ def main():
     t1 = threading.Thread(target=threaded_server,args=(8090, secret_key, 1))
     t2 = threading.Thread(target=threaded_server,args=(8091, secret_key, 2))
     t3 = threading.Thread(target=threaded_server,args=(8092, secret_key, 3))
-    #might need to create another thread to communicate with ML
-    #t4 = threading.Thread(target=send_to_ML, args=())
 
     t1.start()
     t2.start()
     t3.start()
-    #t4.start()
 
     t1.join()
     t2.join()
     t3.join()
-    #t4.join()
 
     print("done!")
 
