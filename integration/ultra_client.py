@@ -23,7 +23,7 @@ db_q = deque()
 eval_q = deque()
 
 #====================================================================================================================================================================
-def threaded_client(ser_addr, ser_port, secret_key, onMlReady=None):
+def evaluation_client(ser_addr, ser_port, secret_key, onMlReady=None):
     #connect to eval server
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # TCP socket
     client_socket.connect((ser_addr, ser_port))  # connect to the server
@@ -111,7 +111,54 @@ def threaded_client(ser_addr, ser_port, secret_key, onMlReady=None):
     client_socket.close()
 
 #connect and send data to mongoDb atlas server for dashboard
-def dashboard_client(onMlReady=None):
+def dashboard_server(secret_key, onMlReady=None):
+    #send to laptop server to send to mongoDb
+    ser_addr = '127.0.0.1'
+    ser_port = 8080
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # get instance
+    try:
+        server_socket.bind((ser_addr, int(ser_port)))  # bind host address and port together
+    except socket.error as e:
+        print(f"{e}")
+    print(f"waiting for connection on dashboard thread")
+    # configure server into listen mode
+    server_socket.listen(1)
+    conn, address = server_socket.accept()  # accept new connection
+    print(f"Connected to: {address[0]} : {address[1]} on dashboard thread")
+
+    try:
+        while server_socket.fileno() != -1:
+            flag = 1
+            #if there is data in queue, send to mongodb
+            if onMlReady is not None:
+                newdata = onMlReady(forDB=True)
+                while newdata is not None:  #error here 
+                    for x in range(3):
+                        dancer_id = x
+                        index = newdata[dancer_id]['index']
+                        action = newdata[dancer_id]['action']
+                        position = newdata[dancer_id]['position']
+                        time_x = newdata[dancer_id]['time']
+
+                        if action == 'logout':
+                            flag = 0
+
+                        data = (f"{dancer_id}|{index}|{action}|{position}|{time_x}")
+                        send_data(conn,secret_key,data)
+                        print("data sent to dashboard client")
+                        message = recv_data(conn, secret_key)
+
+                    newdata = onMlReady(forDB=True)
+            if not flag:
+                break
+            time.sleep(0.001)
+    except Exception as e:
+        print(f"{e}")
+        conn.close()
+    print("dashboard thread closed")
+    conn.close()
+
+    '''
     #connect to dashboard MongoDB atlas
     print("connecting to MongoDB atlas")
     connection = connect_to_mongodb()
@@ -129,6 +176,7 @@ def dashboard_client(onMlReady=None):
             break
         time.sleep(0.001)
     print("connection to MongoDB closed")
+    '''
 
 #====================================================================================================================================================================
 
@@ -166,12 +214,20 @@ def send_data(conn, secret_key, data):
     conn.send(data)
     print("sent data\n")
 
+#receive message from ultra96, decrypt, unpad and decode
+def recv_data(client_socket, secret_key):
+    message = client_socket.recv(1024).decode()  #wait to receive message
+    message = decrypt_message(message,secret_key)
+    message = message[:-message[-1]]    #remove padding
+    message = message.decode('utf8')    #to remove b'1|rocketman|
+    return message
+
 #for storing the data from csv file or ML
 def makehash():
     return collections.defaultdict(makehash)
 
 #====================================================================================================================================================================
-
+'''
 def connect_to_mongodb():
     global db
     global db_predictions
@@ -239,7 +295,7 @@ def data_to_send(data):
         else:
             print("successfully sent to MongoDB")
             return 1
-
+'''
 #====================================================================================================================================================================
 def main():
     ser_addr = input('server address->')
@@ -247,6 +303,7 @@ def main():
 
     secret_key = b'0123456789ABCDEF' #dummy secret key, 16 bytes
 
+    '''
     #read data from csv file, temporary, by right, data will stream from ML side, get via another thread
     with open('final_data.csv', mode = 'r') as file:
         csvFile = csv.DictReader(file)
@@ -263,10 +320,13 @@ def main():
                 db_q.append(index)
                 eval_q.append(index)
         #print(database)
+    '''
 
+    global database
+    database = makehash()
     #2 threads to send to evaluation and dashboard server_address
-    t1 = threading.Thread(target=threaded_client, args=(ser_addr, int(ser_port), secret_key, database))
-    t2 = threading.Thread(target=dashboard_client, args=(database,))
+    t1 = threading.Thread(target=evaluation_client, args=(ser_addr, int(ser_port), secret_key, database))
+    t2 = threading.Thread(target=dashboard_server, args=(secret_key, database,))
     #1 thread to listen/get data from ML side
     #t3 = threading.Thread()
 

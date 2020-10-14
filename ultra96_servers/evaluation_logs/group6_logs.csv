@@ -300,3 +300,6 @@ timestamp,position,gt_position,action,gt_action,response_time,sync,is_action_cor
 1602163059.2555954,None,2 1 3,None,hair,60.00038433074951,0,False,False
 1602163119.259015,None,3 2 1,None,hair,60.000408411026,0,False,False
 1602163179.2622783,None,3 1 2,None,hair,60.000489950180054,0,False,False
+1602650267.0074825,None,1 3 2,None,rocket,60.00149893760681,0,False,False
+1602650327.0433385,None,1 3 2,None,rocket,60.00067663192749,0,False,False
+1602650387.047789,None,1 3 2,None,zigzag,60.00110602378845,0,False,False

@@ -1,4 +1,4 @@
-'''
+
 #import datetime
 from datetime import datetime
 import os
@@ -21,9 +21,10 @@ import threading
 data = time.time()
 print(f"{data}\n")
 
-data1 = datetime.fromtimestamp(data).strftime("%A, %B %d, %Y %H:%M:%S")
+#data1 = datetime.fromtimestamp(data).strftime("%A, %B %d, %Y %H:%M:%S")
+data1 = datetime.fromtimestamp(data)
 print(f"{data1}\n")
-'''
+
 '''
 import collections
 import pymongo
@@ -63,6 +64,7 @@ for x in myfamily["child1"].values():
 
 #print(myfamily["child1"]["name"])
 '''
+'''
 x = []
 
 x.insert(3,1)
@@ -74,3 +76,4 @@ print(x)
 data = (f"{x[0]} {x[1]} {x[2]}")
 
 print(data)
+'''

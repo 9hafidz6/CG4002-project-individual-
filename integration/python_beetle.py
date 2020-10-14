@@ -36,7 +36,7 @@ def main():
 
                 message = client_socket.recv(1024).decode()
 
-                if lines['raw'] == 'bye-bye':
+                if lines['raw'] == 'Dance Move Stop':
                     print("end of dance move")
                     break
 

@@ -24,7 +24,7 @@ def threaded_server(port_num, secret_key, ThreadCount, onRecv=None):
     try:
         server_socket.bind((host, int(port_num)))  # bind host address and port together
     except socket.error as e:
-        print(str(e))
+        print(f"{e}")
     print(f"waiting for connection on thread: {ThreadCount}")
     # configure server into listen mode
     server_socket.listen(1)
@@ -60,7 +60,7 @@ def threaded_server(port_num, secret_key, ThreadCount, onRecv=None):
                 data = ' '
                 send_data(conn, secret_key, data)
 
-                if raw == 'bye-bye':
+                if raw == 'Dance Move Stop':
                     print(f"dance finished at: {final_time}")
                     break
                 if raw == 'logout':

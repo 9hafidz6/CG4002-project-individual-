@@ -68,7 +68,7 @@ def client_program(secret_key, port_num, dancer_id):
                     print("final dance finished")
                     finish = True
                     break
-                elif raw == 'bye-bye':
+                elif raw == 'Dance Move Stop':
                     #finish = True
                     print("dance finished")
                     break
@@ -100,7 +100,7 @@ def server_program():
             beetle_msg = conn.recv(1024).decode('utf8')
             timestamp, raw, QUATW, QUATX, QUATY, QUATZ, ACCELX, ACCELY, ACCELZ, GYROX, GYROY, GYROZ = str(beetle_msg).split('|')
             conn.send(' '.encode()) #send back arbitrary data
-            if raw == '#':
+            if raw == 'Dance Move Start':
                 q.append(beetle_msg)    #append the packet with the start flag to the q
                 while True:
                     #if starting flag detected, put all incoming message into queue
@@ -109,13 +109,14 @@ def server_program():
                     conn.send(' '.encode()) #send back arbitrary data
                     q.append(beetle_msg)    #append dance data to the q
                     #if end of move detected
-                    if raw == 'bye-bye':
+                    if raw == 'Dance Move Stop':
                         print("dance move ended\n")
                         break
             time.sleep(0.001)
-    except:
-        conn.close()
+    except Exception as e:
+        print(f"Exception: {e}")
         print("connection error")
+        conn.close()
     else:
         conn.close()
         print("server connection closed")
