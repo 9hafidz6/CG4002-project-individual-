@@ -14,9 +14,10 @@ q = deque()
 
 #=====================================================================================================================================
 
-def threaded_client(secret_key, port):
+def threaded_client(secret_key):
     #create a listening socket to ultra96 client
     host = '127.0.0.1'
+    port = 8079
 
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # TCP socket
     client_socket.connect((host, int(port)))  # connect to the server
@@ -63,23 +64,24 @@ def dashboard_client():
 def connect_to_mongodb():
     global db
     global db_predictions
-    for x in range (1,6):   #try reconnecting to mongoDb if 1st try failed
-        try:
-            client = pymongo.MongoClient("mongodb+srv://hafidz:hafidz@cluster0.7p6mm.gcp.mongodb.net/test1?retryWrites=true&w=majority", ssl_cert_reqs=ssl.CERT_NONE)
-        except Exception:
-            print(f"error connecting to mongodb, retrying connection: {x}")
-            continue
-        else:
-            break
-    print("successfully connected to Mongo")
-    db = client['test1']
-    db_predictions = db.predictions
-    return 1
+    try:
+        client = pymongo.MongoClient("mongodb+srv://hafidz:hafidz@cluster0.7p6mm.gcp.mongodb.net/test2?retryWrites=true&w=majority")
+    except:
+        print("error connecting to mongodb")
+        return -1
+    else:
+        print("successfully connected to Mongo")
+        db = client['test2']
+        db_predictions = db.predictions
+        return 1
 
 def data_to_send(data):
     try:
+        #get the data from the queue
+        # data = q.popleft()
+
         #dancer_id1, index1, action1, position1, time1, dancer_id2, index2, action2, position2, time2, dancer_id3, index3, action3, position3, time3 = str(data).split('|')
-        dancer_id, index, action, position, time = str(data).split('|')
+        dancer_id1, index1, action1, position1, time1 = str(data).split('|')
 
         '''
         dancer_id1 = 1
@@ -109,9 +111,9 @@ def data_to_send(data):
 
         #data = {"index": index1, "dancerId": dancer_id1, "move": action1, "position": position1, "eventDate": datetime.fromtimestamp(int(time1)).strftime("%A, %B %d, %Y %H:%M:%S")}
         #data = {"index": index1, "dancerId": dancer_id1, "move": action1, "position": int(position1), "eventDate": datetime.fromtimestamp(int(time1))}
-        data = {"index": int(index), "dancerId": dancer_id, "move": action, "position": int(position), "eventDate": datetime.fromtimestamp(int(time))}
+        data = {"index": index1, "dancerId": dancer_id1, "move": action1, "position": int(position1), "eventDate": datetime.fromtimestamp(int(time.time()))}
         db_predictions.insert_one(data)
-        time.sleep(2)
+        time.sleep(10)
 
     except Exception as e:
         print(f"Error: {e}")
@@ -170,11 +172,10 @@ def recv_data(client_socket, secret_key):
 #=====================================================================================================================================
 
 def main():
-    port = input('ultra96 port->')
     secret_key = b'0123456789ABCDEF'
 
     #create 2 threads to listen to ultra96 and send to mongo_db
-    t1 = threading.Thread(target=threaded_client, args=(secret_key, int(port)))
+    t1 = threading.Thread(target=threaded_client, args=(secret_key,))
     t2 = threading.Thread(target=dashboard_client, args=())
 
     t1.start()

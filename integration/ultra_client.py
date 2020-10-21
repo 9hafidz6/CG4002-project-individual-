@@ -23,160 +23,147 @@ db_q = deque()
 eval_q = deque()
 
 #====================================================================================================================================================================
-def evaluation_client(ser_addr, ser_port, secret_key, onMlReady=None):
+def evaluation_client(ser_addr, ser_port, secret_key, onMlReady):
     #connect to eval server
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # TCP socket
     client_socket.connect((ser_addr, ser_port))  # connect to the server
+    print("connected to evaluation server")
 
     try:
-        #index = 0
-        #user_prompt = input('->')
         exit_flag = False
         dancer_position = np.array([1, 2, 3])
         while client_socket.fileno() != -1:
 
-            if onMlReady is not None:
+            newdata = onMlReady(forEval=True)
+            while newdata is not None:
+                dancer_id1 = 1
+                action1 = newdata[dancer_id1]['action']
+                position1 = newdata[dancer_id1]['position']
+                time1 = newdata[dancer_id1]['time']
+
+                dancer_id2 = 2
+                action2 = action1
+                position2 = position1 + 1
+                time2 = time1
+
+                dancer_id3 = 3
+                action3 = action2
+                position3 = position2 + 1
+                time3 = time2
+
+                # index = eval_q.popleft()
+
+                # dancer_id1 = 1
+                # action1 = database[index][dancer_id1]['action']
+                # position1 = database[index][dancer_id1]['position']
+                # time1 = database[index][dancer_id1]['time']
+
+                # dancer_id2 = 2
+                # action2 = database[index][dancer_id2]['action']
+                # position2 = database[index][dancer_id2]['position']
+                # time2 = database[index][dancer_id2]['time']
+
+                # dancer_id3 = 3
+                # action3 = database[index][dancer_id3]['action']
+                # position3 = database[index][dancer_id3]['position']
+                # time3 = database[index][dancer_id3]['time']
+
+                #check if actions are all same
+                if not action1 == action2 == action3:
+                    print("actions are not the same")
+                    continue
+                #check if positions are all different
+                #print(f"{position1} {position2} {position3}")
+                if position1 == position2 == position3:
+                    print("some have same positions")
+                    continue
+
+                dancer_position[int(position1)-1] = dancer_id1
+                dancer_position[int(position2)-1] = dancer_id2
+                dancer_position[int(position3)-1] = dancer_id3
+
+                final_position = (f"{dancer_position[0]} {dancer_position[1]} {dancer_position[2]}")
+
+                data = (f"#{final_position}|{action1}|{time1}")
+                send_data(client_socket,secret_key,data)
+                print(data)
+
+                message = client_socket.recv(1024).decode()
+                print(f"Recved {message}")
+
+                if action1 == 'logout':
+                    print("exiting")
+                    exit_flag = True
+
                 newdata = onMlReady(forEval=True)
-                while newdata is not None:
-                    dancer_id1 = 1
-                    action1 = newdata[dancer_id1]['action']
-                    position1 = newdata[dancer_id1]['position']
-                    time1 = newdata[dancer_id1]['time']
-
-                    dancer_id2 = 2
-                    action2 = action1
-                    position2 = position1 + 1
-                    time2 = time1
-
-                    dancer_id3 = 3
-                    action3 = action2
-                    position3 = position2 + 1
-                    time3 = time2
-
-                    # index = eval_q.popleft()
-
-                    # dancer_id1 = 1
-                    # action1 = database[index][dancer_id1]['action']
-                    # position1 = database[index][dancer_id1]['position']
-                    # time1 = database[index][dancer_id1]['time']
-
-                    # dancer_id2 = 2
-                    # action2 = database[index][dancer_id2]['action']
-                    # position2 = database[index][dancer_id2]['position']
-                    # time2 = database[index][dancer_id2]['time']
-
-                    # dancer_id3 = 3
-                    # action3 = database[index][dancer_id3]['action']
-                    # position3 = database[index][dancer_id3]['position']
-                    # time3 = database[index][dancer_id3]['time']
-
-                    #check if actions are all same
-                    if not action1 == action2 == action3:
-                        print("actions are not the same")
-                        continue
-                    #check if positions are all different
-                    #print(f"{position1} {position2} {position3}")
-                    if position1 == position2 == position3:
-                        print("some have same positions")
-                        continue
-
-                    dancer_position[int(position1)-1] = dancer_id1
-                    dancer_position[int(position2)-1] = dancer_id2
-                    dancer_position[int(position3)-1] = dancer_id3
-
-                    final_position = (f"{dancer_position[0]} {dancer_position[1]} {dancer_position[2]}")
-
-                    data = (f"#{final_position}|{action1}|{time1}")
-                    send_data(client_socket,secret_key,data)
-                    print(data)
-
-                    message = client_socket.recv(1024).decode()
-                    print(f"Recved {message}")
-
-                    if action1 == 'logout':
-                        print("exiting")
-                        exit_flag = True
-
-                    newdata = onMlReady(forEval=True)
 
             if exit_flag:
                 break
             time.sleep(0.001)
-            #user_prompt = input('->')
 
     except (ConnectionError, ConnectionRefusedError):
         print("error, connection lost")
         client_socket.close()
+        sys.exit(1)
     print("closing connection")
     client_socket.close()
 
 #connect and send data to mongoDb atlas server for dashboard
-def dashboard_server(secret_key, onMlReady=None):
+def dashboard_server(secret_key, dash_port, onMlReady):
     #send to laptop server to send to mongoDb
     ser_addr = '127.0.0.1'
-    ser_port = 8080
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # get instance
     try:
-        server_socket.bind((ser_addr, int(ser_port)))  # bind host address and port together
+        server_socket.bind((ser_addr, int(dash_port)))  # bind host address and port together
     except socket.error as e:
         print(f"{e}")
-    print(f"waiting for connection on dashboard thread")
+    print(f"waiting for connection on dashboard thread...")
     # configure server into listen mode
     server_socket.listen(1)
     conn, address = server_socket.accept()  # accept new connection
-    print(f"Connected to: {address[0]} : {address[1]} on dashboard thread")
+    print(f"Connected to: {address[0]} : {str(address[1])} on dashboard thread")
 
     try:
         while server_socket.fileno() != -1:
             flag = 1
             #if there is data in queue, send to mongodb
-            if onMlReady is not None:
+            newdata = onMlReady(forDB=True)
+            # print("test")
+            while newdata is not None:
+                # print("test1")
+                for x in range(1,4):
+                    if not x in newdata:
+                        print(f"Key {x} cannot be found! Moving on.")
+                        continue
+
+                    dancer_id = x
+                    index = newdata[dancer_id]['index']
+                    action = newdata[dancer_id]['action']
+                    position = newdata[dancer_id]['position']
+                    time_x = newdata[dancer_id]['time']
+
+                    if action == 'logout':
+                        flag = 0
+
+                    data = (f"{dancer_id}|{index}|{action}|{position}|{time_x}")
+                    #send_data1(conn,secret_key,data)
+                    data = padding1(data)
+                    data = encrypt_message(data,secret_key)
+                    conn.send(data)
+                    print("data sent to dashboard client")
+
+                    message = recv_data(conn, secret_key)
+
                 newdata = onMlReady(forDB=True)
-                while newdata is not None:  #error here 
-                    for x in range(3):
-                        dancer_id = x
-                        index = newdata[dancer_id]['index']
-                        action = newdata[dancer_id]['action']
-                        position = newdata[dancer_id]['position']
-                        time_x = newdata[dancer_id]['time']
-
-                        if action == 'logout':
-                            flag = 0
-
-                        data = (f"{dancer_id}|{index}|{action}|{position}|{time_x}")
-                        send_data(conn,secret_key,data)
-                        print("data sent to dashboard client")
-                        message = recv_data(conn, secret_key)
-
-                    newdata = onMlReady(forDB=True)
             if not flag:
                 break
             time.sleep(0.001)
-    except Exception as e:
-        print(f"{e}")
+    except:
+        print("Something went wrong")
         conn.close()
+        sys.exit(1)
     print("dashboard thread closed")
     conn.close()
-
-    '''
-    #connect to dashboard MongoDB atlas
-    print("connecting to MongoDB atlas")
-    connection = connect_to_mongodb()
-
-    while connection:
-        flag = 1
-        #if there is data in queue, send to mongodb
-        if onMlReady is not None:
-            newdata = onMlReady(forDB=True)
-            while newdata is not None:
-                flag = data_to_send(newdata)
-                newdata = onMlReady(forDB=True)
-
-        if not flag:
-            break
-        time.sleep(0.001)
-    print("connection to MongoDB closed")
-    '''
 
 #====================================================================================================================================================================
 
@@ -187,6 +174,14 @@ def padding(message):
     message += bytes('\n', 'utf8')*length   #if padding of \0x10 for example, the evaluation server will not unpad properly
     print(f"padding: {message}")
     return message
+
+#padding to make the message in multiples of 16
+def padding1(data):
+    length = 16 - (len(data) % 16)
+    data = data.encode()
+    data += bytes([length])*length
+    #print("\t\tpadding: " + str(data))
+    return data
 
 #decrypt the message
 def decrypt_message(message,key):
@@ -227,82 +222,12 @@ def makehash():
     return collections.defaultdict(makehash)
 
 #====================================================================================================================================================================
-'''
-def connect_to_mongodb():
-    global db
-    global db_predictions
-    try:
-        client = pymongo.MongoClient("mongodb+srv://hafidz:hafidz@cluster0.7p6mm.gcp.mongodb.net/test1?retryWrites=true&w=majority")
-    except:
-        print("error connecting to mongodb")
-        return -1
-    else:
-        print("successfully connected to Mongo")
-        db = client['test1']
-        db_predictions = db.predictions
-        return 1
-
-def data_to_send(data):
-    try:
-        #send data from queue or csv file for now
-        # index = db_q.popleft()
-
-        dancer_id1 = 1
-        index = data[dancer_id1]['index']
-        action1 = data[dancer_id1]['action']
-        position1 = data[dancer_id1]['position']
-        time1 = data[dancer_id1]['time']
-
-        dancer_id2 = 2
-        action2 = action1
-        position2 = position1 + 1
-        time2 = time1
-
-        dancer_id3 = 3
-        action3 = action2
-        position3 = position2 + 1
-        time3 = time2
-
-        # dancer_id1 = 1
-        # action1 = database[index][dancer_id1]['action']
-        # position1 = database[index][dancer_id1]['position']
-        # time1 = database[index][dancer_id1]['time']
-
-        # dancer_id2 = 2
-        # action2 = database[index][dancer_id2]['action']
-        # position2 = database[index][dancer_id2]['position']
-        # time2 = database[index][dancer_id2]['time']
-
-        # dancer_id3 = 3
-        # action3 = database[index][dancer_id3]['action']
-        # position3 = database[index][dancer_id3]['position']
-        # time3 = database[index][dancer_id3]['time']
-
-        data_list = [
-            {"index": index, "dancerId": dancer_id1, "move": action1, "position": position1, "eventDate": datetime.fromtimestamp(int(time1)).strftime("%A, %B %d, %Y %H:%M:%S")},
-            {"index": index, "dancerId": dancer_id2, "move": action2, "position": position2, "eventDate": datetime.fromtimestamp(int(time2)).strftime("%A, %B %d, %Y %H:%M:%S")},
-            {"index": index, "dancerId": dancer_id3, "move": action3, "position": position3, "eventDate": datetime.fromtimestamp(int(time3)).strftime("%A, %B %d, %Y %H:%M:%S")}
-        ]
-
-        db_predictions.insert_many(data_list)
-    except Exception as e:
-        print(f"Error: {e}")
-        print("error sending to MongoDB")
-        return -1
-    else:
-        if action1 == 'logout':
-            return -1
-        else:
-            print("successfully sent to MongoDB")
-            return 1
-'''
-#====================================================================================================================================================================
 def main():
     ser_addr = input('server address->')
     ser_port = input('server port->')
+    dash_port = input('dashboard client port->')
 
     secret_key = b'0123456789ABCDEF' #dummy secret key, 16 bytes
-
     '''
     #read data from csv file, temporary, by right, data will stream from ML side, get via another thread
     with open('final_data.csv', mode = 'r') as file:
@@ -321,22 +246,17 @@ def main():
                 eval_q.append(index)
         #print(database)
     '''
-
     global database
     database = makehash()
     #2 threads to send to evaluation and dashboard server_address
     t1 = threading.Thread(target=evaluation_client, args=(ser_addr, int(ser_port), secret_key, database))
-    t2 = threading.Thread(target=dashboard_server, args=(secret_key, database,))
-    #1 thread to listen/get data from ML side
-    #t3 = threading.Thread()
+    t2 = threading.Thread(target=dashboard_server, args=(secret_key, int(dash_port), database,))
 
     t1.start()
     t2.start()
-    #t3.start()
 
     t1.join()
     t2.join()
-    #t3.join()
 
     print("done!")
 

@@ -28,7 +28,7 @@ def main():
 
             for lines in csvFile:
                 #data = (f"{lines['Timestamp (ns)']}|{lines['raw']}|{lines['QUAT W']}|{lines['QUAT X']}|{lines['QUAT Y']}|{lines['QUAT Z']}|{lines['ACCEL X']}|{lines['ACCEL Y']}|{lines['ACCEL Z']}|{lines['GYRO X']}|{lines['GYRO Y']}|{lines['GYRO Z']}")
-                data = (f"{time.time()}|{lines['raw']}|{lines['ACCELX']}|{lines['ACCELY']}|{lines['ACCELZ']}|{lines['ELBOWX']}|{lines['ELBOWY']}|{lines['ELBOWZ']}|{lines['HANDX']}|{lines['HANDY']}|{lines['HANDZ']}")
+                data = (f"{time.time()}|{lines['raw']}|{lines['QUAT W']}|{lines['QUAT X']}|{lines['QUAT Y']}|{lines['QUAT Z']}|{lines['ACCEL X']}|{lines['ACCEL Y']}|{lines['ACCEL Z']}|{lines['GYRO X']}|{lines['GYRO Y']}|{lines['GYRO Z']}")
 
                 data = data.encode()
                 client_socket.send(data)

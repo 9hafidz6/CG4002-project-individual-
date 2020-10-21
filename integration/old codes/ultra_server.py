@@ -25,12 +25,12 @@ def threaded_server(port_num, secret_key, ThreadCount, onRecv=None):
         server_socket.bind((host, int(port_num)))  # bind host address and port together
     except socket.error as e:
         print(f"{e}")
-    print(f"waiting for connection on server thread: {ThreadCount}")
+    print(f"waiting for connection on thread: {ThreadCount}")
     # configure server into listen mode
     server_socket.listen(1)
 
     conn, address = server_socket.accept()  # accept new connection
-    print(f"Connected to: {address[0]} : {str(address[1])} on server thread: {ThreadCount}")
+    print(f"Connected to: {address[0]} : {str(address[1])} on thread: {ThreadCount}")
 
     try:
         while server_socket.fileno() != -1:
@@ -41,7 +41,7 @@ def threaded_server(port_num, secret_key, ThreadCount, onRecv=None):
             #wait for start of dance, get ntp timing and send back to get rtt and offset
             message = recv_data(conn, secret_key)
 
-            timestamp, raw, ACCELX, ACCELY, ACCELZ, ELBOWX, ELBOWY, ELBOWZ, HANDX, HANDY, HANDZ = str(message).split('|')    #to segregate each data
+            dancer_id, timestamp, raw, QUATW, QUATX, QUATY, QUATZ, ACCELX, ACCELY, ACCELZ, GYROX, GYROY, GYROZ = str(message).split('|')    #to segregate each data
             print(f"start message received: {message}")
             ntp_time = request_time()
             data = (f"{ntp_time}")
@@ -52,7 +52,7 @@ def threaded_server(port_num, secret_key, ThreadCount, onRecv=None):
             while True:
                 message = recv_data(conn, secret_key)
 
-                index, dancer_id, final_offset, timestamp, raw, ACCELX, ACCELY, ACCELZ, ELBOWX, ELBOWY, ELBOWZ, HANDX, HANDY, HANDZ = str(message).split('|')    #to segregate each data
+                index, dancer_id, final_offset, timestamp, raw, QUATW, QUATX, QUATY, QUATZ, ACCELX, ACCELY, ACCELZ, GYROX, GYROY, GYROZ = str(message).split('|')    #to segregate each data
                 # print(f"received message from laptop:\nindex: {index}\ndancer ID: {dancer_id}\ntimestamp: {timestamp}\nraw: {raw}\nQUAT W: {QUATW}\nQUAT X: {QUATX}\nQUAT Y: {QUATY}\nQUAT Z: {QUATZ}")
                 # print(f"ACCEL X: {ACCELX}\nACCEL Y: {ACCELY}\nACCELZ: {ACCELZ}\nGYRO X: {GYROX}\nGYRO Y: {GYROY}\nGYRO Z: {GYROZ}\n\n")
                 # print(f"final offset: {final_offset}\n")
@@ -69,11 +69,11 @@ def threaded_server(port_num, secret_key, ThreadCount, onRecv=None):
                 else:
                     final_time = float(timestamp) + float(final_offset)
 
-                    file.write(f"{index},{dancer_id},{timestamp},{raw},{ACCELX},{ACCELY},{ACCELZ},{ELBOWX},{ELBOWY},{ELBOWZ},{HANDX},{HANDY},{HANDZ},{final_time}\n")
+                    file.write(f"{index},{dancer_id},{timestamp},{raw},{QUATW},{QUATX},{QUATY},{QUATZ},{ACCELX},{ACCELY},{ACCELZ},{GYROX},{GYROY},{GYROZ},{final_time}\n")
 
                     if onRecv is not None:
-                        processed = {"index": index, "id": dancer_id, "timestamp": timestamp, "raw": raw, "accelx": ACCELX, "accely": ACCELY, "accelz": ACCELZ, "elbowx": ELBOWX, "elbowy": ELBOWY,
-                                    "elbowz": ELBOWZ, "handx": HANDX, "handy": HANDY, "handz": HANDZ, "finaltime": final_time}
+                        processed = {"index": index, "id": dancer_id, "timestamp": timestamp, "raw": raw, "quatw": QUATW, "quatx": QUATX, "quaty": QUATY, "quatz": QUATZ, "accelx": ACCELX,
+                                    "accely": ACCELY, "accelz": ACCELZ, "gyrox": GYROX, "gyroy": GYROY, "gyroz": GYROZ, "finaltime": final_time}
                         onRecv(processed)
 
             if finish == True:
@@ -81,10 +81,10 @@ def threaded_server(port_num, secret_key, ThreadCount, onRecv=None):
             time.sleep(0.001)
 
     except (ConnectionError, ConnectionRefusedError):
-        print(f"error, connection lost for thread {ThreadCount}")
+        print("error, connection lost")
         conn.close()
         file.close()
-        #sys.exit(1)
+        sys.exit(1)
 
     conn.close()  # close the connection
     file.close()
@@ -129,7 +129,7 @@ def recv_data(client_socket, secret_key):
     message = client_socket.recv(1024).decode()  #wait to receive message
     message = decrypt_message(message,secret_key)
     message = message[:-message[-1]]    #remove padding
-    message = message.decode('utf8')    #to remove b'1|rocketman|1.8'
+    message = message.decode('utf8')    #to remove b'1|rocketman|
     return message
 
 #get the NTP time for synchronization
@@ -144,11 +144,8 @@ def request_time():
     return response.orig_time
 #====================================================================================================================================================================
 def main():
+    ThreadCount = 0
     #hard coded for testing purposes, actual run will ask user to input
-    #t1_port = input('enter port for thread1->')
-    #t2_port = input('enter port for thread2->')
-    #t3_port = input('enter port for thread3->')
-
     secret_key = b'0123456789ABCDEF'
 
     #create 3 threads for each of the dancer, each listening on the loopback address but on specific port

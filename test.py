@@ -1,4 +1,4 @@
-
+'''
 #import datetime
 from datetime import datetime
 import os
@@ -24,7 +24,7 @@ print(f"{data}\n")
 #data1 = datetime.fromtimestamp(data).strftime("%A, %B %d, %Y %H:%M:%S")
 data1 = datetime.fromtimestamp(data)
 print(f"{data1}\n")
-
+'''
 '''
 import collections
 import pymongo
@@ -76,4 +76,31 @@ print(x)
 data = (f"{x[0]} {x[1]} {x[2]}")
 
 print(data)
+'''
+
+from collections import deque
+q = deque()
+
+thisdict =	{
+  "brand": "Ford",
+  "model": "Mustang",
+  "year": 1964
+}
+
+q.append(thisdict)
+
+data = q.popleft()
+
+data["year"] = 2018
+
+print(f"{data['year']}")
+
+'''
+try:
+    inp = input()
+    print ('Press Ctrl+C or Interrupt the Kernel:')
+except KeyboardInterrupt:
+    print ('Caught KeyboardInterrupt')
+else:
+    print ('No exception occurred')
 '''

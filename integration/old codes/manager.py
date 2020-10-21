@@ -6,7 +6,7 @@ from ml_driver import MLDriver
 # from ml_driver import MLDriverStub as MLDriver # Use when driver.py not available
 
 #for debugging purposes
-from collections import deque
+from collections import deque 
 
 import threading
 import time
@@ -32,14 +32,16 @@ def onMLReady(forEval=False, forDB=False):
   global eval_q, db_q
   newdata = None
   if forEval:
-    if eval_q:
+    while eval_q:
       newdata = eval_q.popleft()
+      break
   elif forDB:
-    if db_q:
+    while db_q:
       newdata = db_q.popleft()
+      break
   else:
     print("This should not happen!")
-
+  
   return newdata
 
 def mlthread():
@@ -85,7 +87,7 @@ def mlthread():
 
           df = pd.DataFrame(mlbuffer_list)
           # ['index', 'id', 'timestamp', 'raw', 'quatx', 'quaty', 'quatz', 'accelx','accely', 'accelz', 'gyrox', 'gyroy', 'gyroz', 'finaltime']
-
+          
           df.drop(columns=['index', 'id', 'raw', 'finaltime'], inplace=True)
           # ['timestamp', 'quatw', 'quatx', 'quaty', 'quatz', 'accelx','accely', 'accelz', 'gyrox', 'gyroy', 'gyroz']
           # Assume samples are uniformly sampled at a certain frequency TODO: Add interpolation if not giving good results
@@ -115,7 +117,7 @@ def mlthread():
             return actions[index]
 
           tosend = {
-            1: {
+            1: { 
               "index": label,
               "action": getaction(label),
               "position": 1,
@@ -127,7 +129,6 @@ def mlthread():
 
           db_q.append(tosend)
           eval_q.append(tosend)
-
           break
 
 
@@ -135,8 +136,8 @@ def main():
   global ml_q, db_q, eval_q
   ser_addr = input('server address->')
   ser_port = input('server port->')
-  dash_port = input('dashboard client port->')
 
+  ThreadCount = 0
   #hard coded for testing purposes, actual run will ask user to input
   secret_key = b'0123456789ABCDEF'
 
@@ -150,7 +151,7 @@ def main():
   ml_t = threading.Thread(target=mlthread, args=())
 
   client_t1 = threading.Thread(target=evaluation_client, args=(ser_addr, int(ser_port), secret_key, onMLReady))
-  client_t2 = threading.Thread(target=dashboard_server, args=(secret_key, int(dash_port), database,))
+  client_t2 = threading.Thread(target=dashboard_server, args=(onMLReady,))
 
   server_t1.start()
   server_t2.start()

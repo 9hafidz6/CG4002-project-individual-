@@ -15,8 +15,11 @@ from Crypto import Random
 import math
 import ntplib
 
+num_of_nodes = 0
+timex = 0
+
 #listen and receive data from client, parse the data and store in txt file
-def threaded_server(port_num, secret_key, ThreadCount, onRecv=None):
+def threaded_server(port_num, secret_key, ThreadCount, cv, onRecv=None):
     file = open("raw_data.txt", "a+")
 
     host = '127.0.0.1'
@@ -34,6 +37,7 @@ def threaded_server(port_num, secret_key, ThreadCount, onRecv=None):
 
     try:
         while server_socket.fileno() != -1:
+            global num_of_nodes
             finish = False
             raw = " "
             final_time = 0
@@ -43,8 +47,11 @@ def threaded_server(port_num, secret_key, ThreadCount, onRecv=None):
 
             timestamp, raw, ACCELX, ACCELY, ACCELZ, ELBOWX, ELBOWY, ELBOWZ, HANDX, HANDY, HANDZ = str(message).split('|')    #to segregate each data
             print(f"start message received: {message}")
-            ntp_time = request_time()
-            data = (f"{ntp_time}")
+            #ntp_time = request_time()
+            num_of_nodes += 1   #increment for every start message
+            with cv:    #to acquire the lock associated with condition
+                cv.wait()   #releases the lock
+            data = (f"{timex}")
             send_data(conn, secret_key, data)
             # print(f"NTP time data sent: {data}\n")
 
@@ -80,16 +87,26 @@ def threaded_server(port_num, secret_key, ThreadCount, onRecv=None):
                 break
             time.sleep(0.001)
 
-    except (ConnectionError, ConnectionRefusedError):
+    except (ConnectionError, ConnectionRefusedError, KeyboardInterrupt):
         print(f"error, connection lost for thread {ThreadCount}")
         conn.close()
         file.close()
         #sys.exit(1)
 
-    conn.close()  # close the connection
+    conn.close()
     file.close()
     print(f"connection closed for thread: {ThreadCount}")
 
+def sync_thread(cv):
+    #all thread get the same NTP timeing
+    while True:
+        global timex
+        global num_of_nodes
+        if num_of_nodes%3 == 0:
+            timex = request_time()
+            with cv:
+                cv.notify_all()
+        time.sleep(0.001)
 #====================================================================================================================================================================
 #padding to make the message in multiples of 16
 def padding(data):
@@ -152,17 +169,21 @@ def main():
     secret_key = b'0123456789ABCDEF'
 
     #create 3 threads for each of the dancer, each listening on the loopback address but on specific port
-    t1 = threading.Thread(target=threaded_server,args=(8090, secret_key, 1))
-    t2 = threading.Thread(target=threaded_server,args=(8091, secret_key, 2))
-    t3 = threading.Thread(target=threaded_server,args=(8092, secret_key, 3))
+    condition = threading.Condition()
+    t1 = threading.Thread(target=threaded_server,args=(8090, secret_key, 1, condition,))
+    t2 = threading.Thread(target=threaded_server,args=(8091, secret_key, 2, condition,))
+    t3 = threading.Thread(target=threaded_server,args=(8092, secret_key, 3, condition,))
+    t4 = threading.Thread(target=sync_thread, args=(condition))
 
     t1.start()
     t2.start()
     t3.start()
+    t4.start()
 
     t1.join()
     t2.join()
     t3.join()
+    t4.join()
 
     print("done!")
 
